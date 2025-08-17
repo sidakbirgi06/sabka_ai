@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -22,10 +23,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-rtqza@csx2mttdr4pn6e^0gvjcehx&l$(ah9v5s!ceud046+xv'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+# This will be True on your local machine, and False on Render
+DEBUG = os.environ.get('DJANGO_DEBUG', '') != 'False'
 
-ALLOWED_HOSTS = ['sabka-apna-ai.onrender.com']
+# We always allow our local server
+ALLOWED_HOSTS = ['127.0.0.1']
+
+# This special variable is provided by Render. This code automatically adds
+# your live URL to the list ONLY when it's running on Render.
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 
 # Application definition
