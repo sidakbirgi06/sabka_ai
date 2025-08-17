@@ -7,6 +7,9 @@ from django.contrib.auth.decorators import login_required
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+import os
 
 # FOR HOME PAGE
 # @login_required
@@ -279,3 +282,33 @@ def chat_view(request):
 
     context = {'chat_history': chat_history}
     return render(request, 'seller/chat.html', context)
+
+
+# in seller/views.py
+
+@csrf_exempt # This allows Meta to send POST requests to us without a CSRF token
+def webhook_view(request):
+    # This is the security check Meta performs when you set up the webhook
+    if request.method == 'GET':
+        # Get the verify token from our Render environment variables
+        verify_token = os.environ.get('WEBHOOK_VERIFY_TOKEN')
+
+        # These are the parameters Meta sends in its request
+        mode = request.GET.get('hub.mode')
+        token = request.GET.get('hub.verify_token')
+        challenge = request.GET.get('hub.challenge')
+
+        # Check if the token and mode are in the request
+        if mode and token:
+            # Check if the mode and token sent are correct
+            if mode == 'subscribe' and token == verify_token:
+                # If they match, we respond with the 'challenge' code
+                print('WEBHOOK_VERIFIED')
+                return HttpResponse(challenge, status=200)
+            else:
+                # If they don't match, we respond with a 'Forbidden' error
+                return HttpResponse('Error, invalid verification token', status=403)
+
+    # We will add logic here later to handle incoming messages (POST requests)
+    # For now, we just acknowledge any other request with a success code.
+    return HttpResponse(status=200)

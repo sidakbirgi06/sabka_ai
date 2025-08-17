@@ -26,4 +26,6 @@ urlpatterns = [
     path('inbox/', views.inbox, name='inbox'),
 
     path('chat/', views.chat_view, name='chat_view'),
+
+    path('webhook/', views.webhook_view, name='webhook'),
 ]
