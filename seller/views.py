@@ -9,7 +9,8 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-import os
+import json
+import requests
 
 # FOR HOME PAGE
 # @login_required
@@ -284,31 +285,88 @@ def chat_view(request):
     return render(request, 'seller/chat.html', context)
 
 
-# in seller/views.py
 
-@csrf_exempt # This allows Meta to send POST requests to us without a CSRF token
+@csrf_exempt
 def webhook_view(request):
-    # This is the security check Meta performs when you set up the webhook
+    # Handle the one-time verification GET request from Meta
     if request.method == 'GET':
-        # Get the verify token from our Render environment variables
         verify_token = os.environ.get('WEBHOOK_VERIFY_TOKEN')
-
-        # These are the parameters Meta sends in its request
         mode = request.GET.get('hub.mode')
         token = request.GET.get('hub.verify_token')
         challenge = request.GET.get('hub.challenge')
+        if mode == 'subscribe' and token == verify_token:
+            print('WEBHOOK_VERIFIED')
+            return HttpResponse(challenge, status=200)
+        else:
+            return HttpResponse('Error, invalid verification token', status=403)
 
-        # Check if the token and mode are in the request
-        if mode and token:
-            # Check if the mode and token sent are correct
-            if mode == 'subscribe' and token == verify_token:
-                # If they match, we respond with the 'challenge' code
-                print('WEBHOOK_VERIFIED')
-                return HttpResponse(challenge, status=200)
-            else:
-                # If they don't match, we respond with a 'Forbidden' error
-                return HttpResponse('Error, invalid verification token', status=403)
+    # Handle incoming messages (POST requests) from users
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        if data.get("object") == "page":
+            for entry in data.get("entry", []):
+                for messaging_event in entry.get("messaging", []):
+                    if messaging_event.get("message"):
+                        sender_id = messaging_event["sender"]["id"]      # User's ID on Facebook
+                        message_text = messaging_event["message"]["text"]  # The message they sent
 
-    # We will add logic here later to handle incoming messages (POST requests)
-    # For now, we just acknowledge any other request with a success code.
-    return HttpResponse(status=200)
+                        # --- THIS IS THE NEW LOGIC ---
+                        try:
+                            # For our prototype, we'll just use the first business profile we find.
+                            # A real multi-user app would need a more complex way to find the right profile.
+                            profile = BusinessProfile.objects.first()
+                            settings = profile.chatbotsettings
+
+                            # 1. Build the System Prompt (the "Briefing Document")
+                            system_prompt = f"""
+                            You are an expert AI assistant for the business named '{profile.business_name}'.
+                            Your assigned name is '{settings.ai_name}'. Your personality must be: '{settings.personality}'.
+
+                            ### CORE INSTRUCTIONS ###
+                            1. Your primary goal is to answer customer questions based ONLY on the information provided below.
+                            2. First, try to find an answer in the 'FAQs' section.
+                            3. If not in the FAQs, use the other business information.
+                            4. Adhere to your personality traits: Greet new customers with '{settings.greeting}'. {'You MUST use emojis.' if settings.use_emojis else 'Do not use emojis.'} Your signature closing line is '{settings.signature_line}'. You must NEVER use these words or phrases: '{settings.phrases_to_avoid}'.
+
+                            ### BUSINESS INFORMATION ###
+                            - Description: {profile.description}
+                            - Contact: Phone: {profile.contact_number}, Email: {profile.business_email}
+                            - Address / Location: {profile.address}
+                            - Operating Hours: {profile.operating_hours}
+                            - Product Categories: {profile.product_categories}
+                            - Top-Selling Products: {profile.top_selling_products}
+                            - Deals/Combos: {profile.combo_packs}
+                            - Payment Methods: COD: {'Yes' if profile.accepts_cod else 'No'}, UPI: {'Yes' if profile.accepts_upi else 'No'}, Card: {'Yes' if profile.accepts_card else 'No'}
+                            - Delivery Methods: {profile.delivery_methods}
+                            - Return/Refund Policy: {profile.return_policy}
+
+                            ### FAQs ###
+                            {profile.faqs}
+                            """
+
+                            # 2. Connect to the AI and get a response
+                            load_dotenv()
+                            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+                            model = genai.GenerativeModel('gemini-1.5-flash-latest')
+
+                            conversation_history_for_api = [
+                                {'role': 'user', 'parts': [system_prompt]},
+                                {'role': 'model', 'parts': ["Understood. I am ready to assist customers for " + profile.business_name]},
+                            ]
+
+                            chat_session = model.start_chat(history=conversation_history_for_api)
+                            response = chat_session.send_message(message_text)
+                            ai_reply = response.text
+
+                            # 3. Send the AI's reply back to the user on Facebook
+                            send_facebook_message(sender_id, ai_reply)
+
+                        except Exception as e:
+                            print(f"Error processing message: {e}")
+                            # Send a fallback message if our AI logic fails
+                            send_facebook_message(sender_id, "Sorry, I'm having a little trouble right now. A human will be with you shortly.")
+
+        # We must return a 200 OK to Facebook to show we received the message.
+        return HttpResponse(status=200)
+
+    return HttpResponse("Unsupported method", status=405)
