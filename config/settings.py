@@ -23,9 +23,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-rtqza@csx2mttdr4pn6e^0gvjcehx&l$(ah9v5s!ceud046+xv'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['sabka-apna-ai.onrender.com']
 
 
 # Application definition
