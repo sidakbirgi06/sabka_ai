@@ -1,0 +1,49 @@
+{% extends 'seller/app_base.html' %}
+
+{% block app_content %}
+    <h1 class="main-heading">Enter Your Chatbot Information</h1>
+
+    <div class="split-container">
+        <div class="info-panel">
+            <h2>SECTION 3 OF 3</h2>
+            <h1>Human Support & Error Handling</h1>
+            <p>Tell the AI what to do when it gets stuck or when a human is needed. This makes your AI reliable.</p>
+        </div>
+
+        <div class="form-panel">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="form-group wide">
+                    {{ form.error_handling_strategy.label_tag }}
+                    {{ form.error_handling_strategy }}
+                </div>
+
+                <div class="form-group wide">
+                    {{ form.custom_error_reply.label_tag }}
+                    {{ form.custom_error_reply }}
+                    {% if form.custom_error_reply.help_text %}
+                        <small class="help-text">{{ form.custom_error_reply.help_text }}</small>
+                    {% endif %}
+                </div>
+
+                <div class="form-group wide">
+                    {{ form.human_escalation_keywords.label_tag }}
+                    {{ form.human_escalation_keywords }}
+                    {% if form.human_escalation_keywords.help_text %}
+                        <small class="help-text">{{ form.human_escalation_keywords.help_text }}</small>
+                    {% endif %}
+                </div>
+
+                <div class="form-group wide">
+                    {{ form.high_priority_alert }}
+                    {{ form.high_priority_alert.label_tag }}
+                </div>
+                <div class="form-navigation">
+                    <a href="{% url 'chatbot_setup_step2' %}" class="button-secondary">Back</a>
+                    <button type="submit">Finish & Save Settings</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock app_content %}

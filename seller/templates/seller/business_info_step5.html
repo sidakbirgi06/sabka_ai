@@ -1,0 +1,28 @@
+{% extends 'seller/app_base.html' %}
+{% block app_content %}
+
+    <div class="split-container">
+        <div class="info-panel">
+            <h2>SECTION 5 OF 5</h2>
+            <h1>FAQs</h1>
+            <p>Provide answers to common questions your customers ask. This will be direct training material for your AI assistant.</p>
+        </div>
+
+        <div class="form-panel">
+            <form method="post">
+                {% csrf_token %}
+                {{ form.faqs.label_tag }}
+                {{ form.faqs }}
+                {% if form.faqs.help_text %}
+                    <small class="help-text">{{ form.faqs.help_text }}</small>
+                {% endif %}
+
+                <div class="form-navigation">
+                    <a href="{% url 'business_info_step4' %}" class="button-secondary">Back</a>
+                    <button type="submit">Finish & Save Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+{% endblock app_content %}

@@ -1,0 +1,43 @@
+{% extends 'seller/app_base.html' %}
+{% block app_content %}
+
+    <div class="split-container">
+        <div class="info-panel">
+            <h2>SECTION 2 OF 5</h2>
+            <h1>Your Brand & Customers</h1>
+            <p>This information helps the AI understand your brand's personality and who you're trying to reach.</p>
+        </div>
+
+        <div class="form-panel">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="form-group wide">
+                    {{ form.usp.label_tag }}
+                    {{ form.usp }}
+                    {% if form.usp.help_text %}
+                        <small style="color: #6c757d; font-style: italic;">{{ form.usp.help_text }}</small>
+                    {% endif %}
+                </div>
+
+                <div class="form-group wide">
+                    {{ form.target_market.label_tag }}
+                    {{ form.target_market }}
+                    {% if form.target_market.help_text %}
+                        <small style="color: #6c757d; font-style: italic;">{{ form.target_market.help_text }}</small>
+                    {% endif %}
+                </div>
+
+                <div class="form-group wide">
+                    {{ form.audience_profile.label_tag }}
+                    {{ form.audience_profile }}
+                </div>
+                <div class="form-navigation">
+                    <a href="{% url 'business_info_step1' %}" class="button-secondary">Back</a>
+                    <button type="submit">Save and Continue to Section 3</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+{% endblock app_content %}

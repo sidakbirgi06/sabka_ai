@@ -1,0 +1,45 @@
+{% extends 'seller/app_base.html' %}
+{% block app_content %}
+
+    <div class="split-container">
+        <div class="info-panel">
+            <h2>SECTION 4 OF 5</h2>
+            <h1>How You Operate</h1>
+            <p>This information teaches the AI about your business processes for payments, delivery, and returns so it can inform customers correctly.</p>
+        </div>
+
+        <div class="form-panel">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="form-group wide">
+                    <label style="font-weight: bold; font-size: 1em; color: #333;">What payment methods do you accept?</label>
+                    <div style="margin-top: 10px;">
+                        <p>{{ form.accepts_cod }} {{ form.accepts_cod.label_tag }}</p>
+                        <p>{{ form.accepts_upi }} {{ form.accepts_upi.label_tag }}</p>
+                        <p>{{ form.accepts_card }} {{ form.accepts_card.label_tag }}</p>
+                    </div>
+                </div>
+
+                <div class="form-group wide">
+                    {{ form.delivery_methods.label_tag }}
+                    {{ form.delivery_methods }}
+                     {% if form.delivery_methods.help_text %}
+                        <small class="help-text">{{ form.delivery_methods.help_text }}</small>
+                    {% endif %}
+                </div>
+
+                <div class="form-group wide">
+                    {{ form.return_policy.label_tag }}
+                    {{ form.return_policy }}
+                </div>
+
+                <div class="form-navigation">
+                    <a href="{% url 'business_info_step3' %}" class="button-secondary">Back</a>
+                    <button type="submit">Save and Continue to Section 5</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+{% endblock app_content %}

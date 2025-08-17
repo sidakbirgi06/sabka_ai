@@ -1,0 +1,33 @@
+{% extends 'seller/base.html' %}
+{% load static %}
+
+{% block content %}
+    <header class="main-header">
+        <div class="logo-container">
+            <a href="{% url 'home' %}">Sabka Apna AI</a>
+        </div>
+        <nav class="main-nav">
+            <ul>
+                <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                <li><a href="{% url 'inbox' %}">Inbox</a></li>
+                <li><a href="{% url 'chat_view' %}">Test Chatbot</a></li>
+                <li><a href="{% url 'business_info_step1' %}">Business Profile</a></li>
+                <li><a href="{% url 'chatbot_setup_step1' %}">Chatbot Setup</a></li>
+            </ul>
+        </nav>
+        <div class="user-info">
+            {% if user.is_authenticated %}
+                <span>Hello, {{ user.username }}!</span>
+                <form action="{% url 'logout' %}" method="post" style="display: inline; margin-left: 15px;">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-button">Logout</button>
+                </form>
+            {% endif %}
+        </div>
+    </header>
+
+    <main class="main-content">
+        {% block app_content %}
+        {% endblock %}
+    </main>
+{% endblock %}

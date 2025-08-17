@@ -1,0 +1,56 @@
+{% extends 'seller/app_base.html' %}
+{% block app_content %}
+
+    <h1 class="main-heading">Enter Your Business Information</h1>
+
+    <div class="split-container">
+        <div class="info-panel">
+            <h2>SECTION 1 OF 5</h2>
+            <h1>Core Business Identity</h1>
+            <p>Let's start with the basics. This information will help your AI introduce your business and answer customer questions accurately.</p>
+        </div>
+
+        <div class="form-panel">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.business_name.label_tag }}
+                        {{ form.business_name }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.owner_name.label_tag }}
+                        {{ form.owner_name }}
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.contact_number.label_tag }}
+                        {{ form.contact_number }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.business_email.label_tag }}
+                        {{ form.business_email }}
+                    </div>
+                </div>
+
+                <div class="form-group wide">
+                    {{ form.address.label_tag }}
+                    {{ form.address }}
+                </div>
+
+                <div class="form-group wide">
+                    {{ form.operating_hours.label_tag }}
+                    {{ form.operating_hours }}
+                </div>
+
+                <div style="text-align: right; margin-top: 30px;">
+                    <button type="submit">Save and Continue to Section 2</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+{% endblock app_content %}

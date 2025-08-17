@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+    <h1>Dashboard</h1>
+
+    {% if profile %}
+        <h2>Welcome, {{ profile.business_name }}!</h2>
+        <p><strong>Your Description:</strong> {{ profile.description }}</p>
+    {% else %}
+        <h2>Welcome!</h2>
+        <p>You haven't set up your business profile yet. Please <a href="{% url 'business_info' %}">set it up now</a>.</p>
+    {% endif %}
+
+    <hr>
+
+    <h3>Sales Activity (Static Placeholder)</h3>
+    <p>The rest of the dashboard with fake data is still here...</p>
+
+</body>
+</html>

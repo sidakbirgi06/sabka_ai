@@ -1,0 +1,29 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.home, name='home'),
+
+    path('signup/', views.signup, name='signup'),
+
+    path('login/', views.login_view, name='login'),    
+
+    path('logout/', views.logout_view, name='logout'),   
+
+    path('business-info/step-1/', views.business_info_step1, name='business_info_step1'),
+    path('business-info/step-2/', views.business_info_step2, name='business_info_step2'),
+    path('business-info/step-3/', views.business_info_step3, name='business_info_step3'),
+    path('business-info/step-4/', views.business_info_step4, name='business_info_step4'),
+    path('business-info/step-5/', views.business_info_step5, name='business_info_step5'),
+
+    path('chatbot-setup/step-1/', views.chatbot_setup_step1, name='chatbot_setup_step1'),
+    path('chatbot-setup/step-2/', views.chatbot_setup_step2, name='chatbot_setup_step2'),
+    path('chatbot-setup/step-3/', views.chatbot_setup_step3, name='chatbot_setup_step3'),
+    
+
+    path('dashboard/', views.dashboard, name='dashboard'),
+
+    path('inbox/', views.inbox, name='inbox'),
+
+    path('chat/', views.chat_view, name='chat_view'),
+]
