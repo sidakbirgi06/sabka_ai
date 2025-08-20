@@ -12,8 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import requests
 
-# FOR HOME PAGE
-# @login_required
+# === FOR HOME PAGE ===
 def home(request):
     return render(request, 'seller/home.html')
 
