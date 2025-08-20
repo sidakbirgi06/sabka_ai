@@ -28,4 +28,6 @@ urlpatterns = [
     path('chat/', views.chat_view, name='chat_view'),
 
     path('webhook/', views.webhook_view, name='webhook'),
+
+    path('debug-data/', views.debug_view, name='debug_data'),
 ]

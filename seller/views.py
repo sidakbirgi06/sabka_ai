@@ -386,3 +386,13 @@ def webhook_view(request):
         return HttpResponse(status=200)
 
     return HttpResponse("Unsupported method", status=405)
+
+
+
+@login_required
+def debug_view(request):
+    all_profiles = BusinessProfile.objects.all()
+    context = {
+        'profiles': all_profiles
+    }
+    return render(request, 'seller/debug_data.html', context)

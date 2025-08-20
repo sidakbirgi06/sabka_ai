@@ -1,0 +1,20 @@
+{% extends 'seller/app_base.html' %}
+
+{% block app_content %}
+    <h1 class="main-heading">Debug View: Business Profiles in Database</h1>
+
+    <h3>Total Profiles Found: {{ profiles.count }}</h3>
+
+    <hr>
+
+    {% for profile in profiles %}
+        <div style="border: 1px solid #ccc; padding: 15px; margin-bottom: 15px;">
+            <h4>Profile ID: {{ profile.id }} (Linked to User: {{ profile.user.username }})</h4>
+            <p><strong>Business Name:</strong> {{ profile.business_name }}</p>
+            <p><strong>Owner Name:</strong> {{ profile.owner_name }}</p>
+            <p><strong>Description:</strong> {{ profile.description }}</p>
+        </div>
+    {% empty %}
+        <p style="font-weight: bold; color: red;">The BusinessProfile table is EMPTY. No data was found.</p>
+    {% endfor %}
+{% endblock app_content %}
