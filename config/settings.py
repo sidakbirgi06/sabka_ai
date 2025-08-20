@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-rtqza@csx2mttdr4pn6e^0gvjcehx&l$(ah9v5s!ceud046+xv
 DEBUG = os.environ.get('DJANGO_DEBUG', '') != 'False'
 
 # We always allow our local server
-ALLOWED_HOSTS = ['127.0.0.1']
+ALLOWED_HOSTS = ['.onrender.com', '127.0.0.1']
 
 # This special variable is provided by Render. This code automatically adds
 # your live URL to the list ONLY when it's running on Render.
