@@ -84,14 +84,19 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': dj_database_url.config(
-        # Get the DATABASE_URL from Render's environment variables
-        default=os.environ.get('DATABASE_URL'),
-        # Keep the connection open for better performance
-        conn_max_age=600
-    )
-}
+if 'DATABASE_URL' in os.environ:
+    # If it is, use it to configure the production database
+    DATABASES = {
+        'default': dj_database_url.config(conn_max_age=600)
+    }
+else:
+    # If it is NOT set, fall back to a local SQLite database for development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

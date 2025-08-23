@@ -42,6 +42,13 @@ class BusinessProfile(models.Model):
     #SECTION 5 OF BUSINESS INFO PAGE
     faqs = models.TextField(verbose_name="Frequently Asked Questions (FAQs)", blank=True, help_text="List common questions and their answers. e.g., Q: Do you offer discounts? A: Yes, on orders above 2000.")
 
+    social_media_links = models.TextField(
+        blank=True, 
+        null=True, 
+        help_text="Optional. Enter your social media links, one per line."
+    )
+
+
 
     def __str__(self):
         return self.business_name
