@@ -13,6 +13,12 @@
                 <li><a href="{% url 'chat_view' %}">Test Chatbot</a></li>
                 <li><a href="{% url 'business_info_step1' %}">Business Profile</a></li>
                 <li><a href="{% url 'chatbot_setup_step1' %}">Chatbot Setup</a></li>
+                {% if not is_connected %}
+                    <li><a href="{% url 'facebook_connect' %}" class="nav-button-connect">Connect Facebook</a></li>
+                {% else %}
+                    <li><span class="nav-connected">✓ Facebook Connected</span></li>
+                {% endif %}
+                 
             </ul>
         </nav>
         <div class="user-info">

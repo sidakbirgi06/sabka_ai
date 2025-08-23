@@ -19,6 +19,10 @@ from .models import FacebookPage
 
 # === FOR HOME PAGE ===
 def home(request):
+    is_connected = FacebookPage.objects.filter(user=request.user).exists()
+    context = {
+        'is_connected': is_connected
+    }
     return render(request, 'seller/home.html')
 
 # FOR SIGNUP PAGE
