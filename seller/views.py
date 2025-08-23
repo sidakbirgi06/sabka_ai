@@ -19,8 +19,17 @@ from .models import FacebookPage
 
 # === FOR HOME PAGE ===
 def home(request):
-    # We are just rendering the template. We are not passing any data to it yet.
-    context = {}
+    is_connected = False # Default value for guests
+
+    # First, we check if the visitor is actually a logged-in user
+    if request.user.is_authenticated:
+        # If they are logged in, THEN we check the database for a connection
+        is_connected = FacebookPage.objects.filter(user=request.user).exists()
+
+    # We pass the result (True or False) to the template
+    context = {
+        'is_connected': is_connected
+    }
     return render(request, 'seller/home.html', context)
 
 # FOR SIGNUP PAGE
