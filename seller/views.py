@@ -422,21 +422,30 @@ def facebook_connect(request):
 
 
 
-def create_superuser_temp(request):
-    # --- PLEASE EDIT THESE DETAILS TO YOUR LIKING ---
-    new_username = "sidak_birgi"
-    new_email = "sidakbirgi06@gmail.com"
-    new_password = "Sidakbirgi@2336"
-    
-    # This will create the user only if they don't already exist
-    if not User.objects.filter(username=new_username).exists():
-        User.objects.create_superuser(new_username, new_email, new_password)
-        return HttpResponse(
-            f"Superuser '{new_username}' created successfully! "
-            f"You can now log in. PLEASE REMOVE THIS URL AND VIEW NOW."
+# --- DATABASE HEALTH CHECK FUNCTION ---
+def database_health_check(request):
+    try:
+        # Get the database connection settings
+        db_engine = settings.DATABASES['default']['ENGINE']
+        db_name = settings.DATABASES['default']['NAME']
+
+        # Try to query the database
+        user_count = User.objects.count()
+        superuser_count = User.objects.filter(is_superuser=True).count()
+
+        # Build a report
+        report = (
+            f"<h1>Database Health Check Report</h1>"
+            f"<p>Successfully connected to the database.</p>"
+            f"<p><strong>Database Engine in use:</strong> {db_engine}</p>"
+            f"<p><strong>Database Name/File:</strong> {db_name}</p>"
+            f"<hr>"
+            f"<p><strong>Total users found:</strong> {user_count}</p>"
+            f"<p><strong>Superusers found:</strong> {superuser_count}</p>"
         )
-    else:
-        return HttpResponse(
-            f"Superuser '{new_username}' already exists. "
-            "You can log in. PLEASE REMOVE THIS URL AND VIEW NOW."
-        )
+        return HttpResponse(report)
+        
+    except Exception as e:
+        # If anything goes wrong, show the error
+        error_message = f"<h1>Database Health Check FAILED</h1><p>Could not connect or query the database. Error: {e}</p>"
+        return HttpResponse(error_message)

@@ -33,7 +33,7 @@ urlpatterns = [
 
     path('facebook/connect/', views.facebook_connect, name='facebook_connect'),
 
-    path('create-admin-user-safely-9981/', views.create_superuser_temp, name='create_superuser_temp'),
+    path('health-check-9981/', views.database_health_check, name='health_check'),
 
     
 ]
