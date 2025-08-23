@@ -14,6 +14,11 @@ class BusinessProfile(models.Model):
     business_email = models.EmailField(blank=True)
     address = models.TextField(blank=True)
     operating_hours = models.CharField(max_length=100, blank=True)
+    social_media_links = models.TextField(
+        blank=True, 
+        null=True, 
+        help_text="Optional. Enter your social media links, one per line."
+    )
 
     # SECTION 2 OF BUSINESS INFO PAGE
     usp = models.TextField(verbose_name="Unique Selling Proposition (USP)", blank=True, help_text="What makes your business special?")
@@ -42,11 +47,6 @@ class BusinessProfile(models.Model):
     #SECTION 5 OF BUSINESS INFO PAGE
     faqs = models.TextField(verbose_name="Frequently Asked Questions (FAQs)", blank=True, help_text="List common questions and their answers. e.g., Q: Do you offer discounts? A: Yes, on orders above 2000.")
 
-    social_media_links = models.TextField(
-        blank=True, 
-        null=True, 
-        help_text="Optional. Enter your social media links, one per line."
-    )
 
 
 
