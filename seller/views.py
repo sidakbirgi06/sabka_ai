@@ -419,22 +419,3 @@ def facebook_connect(request):
     
     return redirect(auth_url)
 
-
-
-
-
-
-#TEMPRORY FUNCTIONS TO CREATE SUPERUSER
-
-def create_superuser_temp(request):
-    # IMPORTANT: CHOOSE YOUR OWN USERNAME, EMAIL, AND A STRONG PASSWORD
-    username = 'admin'
-    email = 'your-email@example.com'
-    password = 'YourStrongPassword123!'
-
-    # Check if the user already exists to avoid errors
-    if not User.objects.filter(username=username).exists():
-        User.objects.create_superuser(username, email, password)
-        return HttpResponse("Admin user created successfully! PLEASE REMOVE THIS URL AND VIEW NOW.")
-    else:
-        return HttpResponse("Admin user already exists. PLEASE REMOVE THIS URL AND VIEW NOW.")

@@ -32,8 +32,4 @@ urlpatterns = [
     path('debug-data/', views.debug_view, name='debug_data'),
 
     path('facebook/connect/', views.facebook_connect, name='facebook_connect'),
-
-    #TEMPORARY URL FOR SUPERUSER
-    path('create-admin-user-safely-9981/', views.create_superuser_temp, name='create_superuser_temp'),
-
 ]
