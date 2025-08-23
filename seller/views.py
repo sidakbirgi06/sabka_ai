@@ -423,14 +423,23 @@ def facebook_connect(request):
 
 
 def create_superuser_temp(request):
-    username_to_find = 'admin'
-    # Let's set a new, easy-to-remember password
-    new_password = 'Sidakbirgi@123' 
+    new_password = 'FinalPassword1!' # A new password to be sure
 
     try:
-        user = User.objects.get(username=username_to_find)
-        user.set_password(new_password)
-        user.save()
-        return HttpResponse(f"Admin user '{username_to_find}' password has been reset successfully! Your new password is: {new_password}. PLEASE REMOVE THIS URL AND VIEW NOW.")
-    except User.DoesNotExist:
-        return HttpResponse(f"Admin user '{username_to_find}' does not exist. Something is wrong.")
+        # Find the first superuser, regardless of their username
+        user = User.objects.filter(is_superuser=True).first()
+        
+        if user:
+            user.set_password(new_password)
+            user.save()
+            # The success message now TELLS you the correct username!
+            return HttpResponse(
+                f"Password for superuser '{user.username}' has been reset successfully! "
+                f"Your username is: {user.username} and your new password is: {new_password}. "
+                "PLEASE REMOVE THIS URL AND VIEW NOW."
+            )
+        else:
+            return HttpResponse("No superuser found in the database. Something is very wrong.")
+            
+    except Exception as e:
+        return HttpResponse(f"An error occurred: {e}")
