@@ -6,7 +6,7 @@ from .models import BusinessProfile, ChatbotSettings
 class BusinessProfileStep1Form(forms.ModelForm):
     class Meta:
         model = BusinessProfile
-        fields = ['business_name', 'owner_name', 'contact_number', 'business_email', 'address', 'operating_hours']
+        fields = ['business_name', 'owner_name', 'contact_number', 'business_email', 'address', 'operating_hours', 'social_media_links']
 
 #FORMS OF BUSINESS INFO PAGE SECTION 2
 class BusinessProfileStep2Form(forms.ModelForm):
