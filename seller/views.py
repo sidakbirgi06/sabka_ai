@@ -423,23 +423,20 @@ def facebook_connect(request):
 
 
 def create_superuser_temp(request):
-    new_password = 'FinalPassword1!' # A new password to be sure
-
-    try:
-        # Find the first superuser, regardless of their username
-        user = User.objects.filter(is_superuser=True).first()
-        
-        if user:
-            user.set_password(new_password)
-            user.save()
-            # The success message now TELLS you the correct username!
-            return HttpResponse(
-                f"Password for superuser '{user.username}' has been reset successfully! "
-                f"Your username is: {user.username} and your new password is: {new_password}. "
-                "PLEASE REMOVE THIS URL AND VIEW NOW."
-            )
-        else:
-            return HttpResponse("No superuser found in the database. Something is very wrong.")
-            
-    except Exception as e:
-        return HttpResponse(f"An error occurred: {e}")
+    # --- PLEASE EDIT THESE DETAILS TO YOUR LIKING ---
+    new_username = "sidak_birgi"
+    new_email = "sidakbirgi06@gmail.com"
+    new_password = "Sidakbirgi@2336"
+    
+    # This will create the user only if they don't already exist
+    if not User.objects.filter(username=new_username).exists():
+        User.objects.create_superuser(new_username, new_email, new_password)
+        return HttpResponse(
+            f"Superuser '{new_username}' created successfully! "
+            f"You can now log in. PLEASE REMOVE THIS URL AND VIEW NOW."
+        )
+    else:
+        return HttpResponse(
+            f"Superuser '{new_username}' already exists. "
+            "You can log in. PLEASE REMOVE THIS URL AND VIEW NOW."
+        )
