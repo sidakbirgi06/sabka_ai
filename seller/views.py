@@ -23,7 +23,7 @@ def home(request):
     context = {
         'is_connected': is_connected
     }
-    return render(request, 'seller/home.html')
+    return render(request, 'seller/home.html', context)
 
 # FOR SIGNUP PAGE
 def signup(request):
@@ -204,8 +204,6 @@ def inbox(request):
     return render(request, 'seller/inbox.html')
 
 # CHAT VIEW
-# in seller/views.py
-
 @login_required
 def chat_view(request):
     try:
@@ -324,72 +322,30 @@ def webhook_view(request):
             return HttpResponse(challenge, status=200)
         else:
             return HttpResponse('Error, invalid verification token', status=403)
-
+    
+    # --- THIS IS THE NEW, UPGRADED PART ---
     # Handle incoming messages (POST requests) from users
     if request.method == 'POST':
         data = json.loads(request.body)
+
+        # Safety check to make sure we are getting a page update
         if data.get("object") == "page":
+            # Loop through the entries, as there can be multiple in a batch
             for entry in data.get("entry", []):
                 for messaging_event in entry.get("messaging", []):
+                    # Check if this is a message event
                     if messaging_event.get("message"):
-                        sender_id = messaging_event["sender"]["id"]      # User's ID on Facebook
+                        # Extract the key information
+                        sender_id = messaging_event["sender"]["id"]      # The user's ID
+                        recipient_id = messaging_event["recipient"]["id"]  # Your Page's ID
                         message_text = messaging_event["message"]["text"]  # The message they sent
 
-                        # --- THIS IS THE NEW LOGIC ---
-                        try:
-                            # For our prototype, we'll just use the first business profile we find.
-                            # A real multi-user app would need a more complex way to find the right profile.
-                            profile = BusinessProfile.objects.first()
-                            settings = profile.chatbotsettings
-
-                            # 1. Build the System Prompt (the "Briefing Document")
-                            system_prompt = f"""
-                            You are an expert AI assistant for the business named '{profile.business_name}'.
-                            Your assigned name is '{settings.ai_name}'. Your personality must be: '{settings.personality}'.
-
-                            ### CORE INSTRUCTIONS ###
-                            1. Your primary goal is to answer customer questions based ONLY on the information provided below.
-                            2. First, try to find an answer in the 'FAQs' section.
-                            3. If not in the FAQs, use the other business information.
-                            4. Adhere to your personality traits: Greet new customers with '{settings.greeting}'. {'You MUST use emojis.' if settings.use_emojis else 'Do not use emojis.'} Your signature closing line is '{settings.signature_line}'. You must NEVER use these words or phrases: '{settings.phrases_to_avoid}'.
-
-                            ### BUSINESS INFORMATION ###
-                            - Description: {profile.description}
-                            - Contact: Phone: {profile.contact_number}, Email: {profile.business_email}
-                            - Address / Location: {profile.address}
-                            - Operating Hours: {profile.operating_hours}
-                            - Product Categories: {profile.product_categories}
-                            - Top-Selling Products: {profile.top_selling_products}
-                            - Deals/Combos: {profile.combo_packs}
-                            - Payment Methods: COD: {'Yes' if profile.accepts_cod else 'No'}, UPI: {'Yes' if profile.accepts_upi else 'No'}, Card: {'Yes' if profile.accepts_card else 'No'}
-                            - Delivery Methods: {profile.delivery_methods}
-                            - Return/Refund Policy: {profile.return_policy}
-
-                            ### FAQs ###
-                            {profile.faqs}
-                            """
-
-                            # 2. Connect to the AI and get a response
-                            load_dotenv()
-                            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-                            model = genai.GenerativeModel('gemini-1.5-flash-latest')
-
-                            conversation_history_for_api = [
-                                {'role': 'user', 'parts': [system_prompt]},
-                                {'role': 'model', 'parts': ["Understood. I am ready to assist customers for " + profile.business_name]},
-                            ]
-
-                            chat_session = model.start_chat(history=conversation_history_for_api)
-                            response = chat_session.send_message(message_text)
-                            ai_reply = response.text
-
-                            # 3. Send the AI's reply back to the user on Facebook
-                            send_facebook_message(sender_id, ai_reply)
-
-                        except Exception as e:
-                            print(f"Error processing message: {e}")
-                            # Send a fallback message if our AI logic fails
-                            send_facebook_message(sender_id, "Sorry, I'm having a little trouble right now. A human will be with you shortly.")
+                        # For testing, let's print what we received to the logs
+                        print(f"--- New Message ---")
+                        print(f"From Sender ID: {sender_id}")
+                        print(f"To Page ID: {recipient_id}")
+                        print(f"Message: '{message_text}'")
+                        print(f"--------------------")
 
         # We must return a 200 OK to Facebook to show we received the message.
         return HttpResponse(status=200)
