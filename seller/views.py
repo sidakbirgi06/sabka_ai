@@ -19,7 +19,13 @@ from .models import FacebookPage
 
 # === FOR HOME PAGE ===
 def home(request):
-    is_connected = FacebookPage.objects.filter(user=request.user).exists()
+    is_connected = False # Start with a default value for guests
+    
+    # First, check if the user is actually logged in
+    if request.user.is_authenticated:
+        # If they are logged in, then we check the database for a connection
+        is_connected = FacebookPage.objects.filter(user=request.user).exists()
+
     context = {
         'is_connected': is_connected
     }
