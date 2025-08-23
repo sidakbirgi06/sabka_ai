@@ -19,7 +19,9 @@ from .models import FacebookPage
 
 # === FOR HOME PAGE ===
 def home(request):
-    return HttpResponse("Hello, the server is running and can handle requests!")
+    # We are just rendering the template. We are not passing any data to it yet.
+    context = {}
+    return render(request, 'seller/home.html', context)
 
 # FOR SIGNUP PAGE
 def signup(request):
