@@ -308,7 +308,43 @@ def send_facebook_message(recipient_id, message_text):
         print(f"Error sending message: {r.status_code} {r.text}")
 
 
-#WEBHOOK VIEW
+# HELPER FUNCTION TO SEND MESSAGES
+def send_facebook_message(recipient_id, message_text, page_access_token):
+    """
+    Sends a text message to a user on Facebook Messenger.
+    """
+    params = {
+        "access_token": page_access_token
+    }
+    headers = {
+        "Content-Type": "application/json"
+    }
+    data = json.dumps({
+        "recipient": {
+            "id": recipient_id
+        },
+        "message": {
+            "text": message_text
+        },
+        "messaging_type": "RESPONSE"
+    })
+    
+    # Make the API call to the Facebook Graph API
+    response = requests.post(
+        "https://graph.facebook.com/v19.0/me/messages",
+        params=params,
+        headers=headers,
+        data=data
+    )
+    
+    # Optional: Print the response from Facebook to see if it was successful
+    print(f"Facebook API Response: {response.status_code}, {response.text}")
+
+
+# ... your other views like home(), facebook_connect(), etc. ...
+
+# WEBHOOK FUNCTION
+
 @csrf_exempt
 def webhook_view(request):
     # Handle the GET request for verification
@@ -335,41 +371,21 @@ def webhook_view(request):
                         message_text = messaging_event["message"]["text"]  
 
                         try:
-                            # Step 2 logic: Find the seller and their settings
+                            # Step 2: Find the seller and their settings
                             facebook_page = FacebookPage.objects.get(page_id=recipient_id)
                             profile = facebook_page.user.businessprofile
                             settings = profile.chatbotsettings
-                            page_access_token = facebook_page.page_access_token # We'll use this in the next step
-
-                            # --- THIS IS THE NEW "AI BRAIN" LOGIC (STEP 3) ---
-
-                            # 1. Build the System Prompt (the "Briefing Document")
+                            page_access_token = facebook_page.page_access_token
+                            
+                            # Step 3: Integrate the "AI Brain"
                             system_prompt = f"""
                             You are an expert AI assistant for the business named '{profile.business_name}'.
                             Your assigned name is '{settings.ai_name}'. Your personality must be: '{settings.personality}'.
-
-                            ### CORE INSTRUCTIONS ###
-                            Your primary goal is to answer customer questions based ONLY on the business information provided.
-                            Adhere to your personality traits: Greet new customers with '{settings.greeting}'. {'You MUST use emojis.' if settings.use_emojis else 'Do not use emojis.'} Your signature closing line is '{settings.signature_line}'. You must NEVER use these words or phrases: '{settings.phrases_to_avoid}'.
-
-                            ### BUSINESS INFORMATION ###
-                            - Description: {profile.description}
-                            - Contact: Phone: {profile.contact_number}, Email: {profile.business_email}
-                            - Address / Location: {profile.address}
-                            - Operating Hours: {profile.operating_hours}
-                            - Product Categories: {profile.product_categories}
-                            - Top-Selling Products: {profile.top_selling_products}
-                            - Deals/Combos: {profile.combo_packs}
-                            - Payment Methods: COD: {'Yes' if profile.accepts_cod else 'No'}, UPI: {'Yes' if profile.accepts_upi else 'No'}, Card: {'Yes' if profile.accepts_card else 'No'}
-                            - Delivery Methods: {profile.delivery_methods}
-                            - Return/Refund Policy: {profile.return_policy}
-                            - Social Media: {profile.social_media_links}
-
+                            # ... (the rest of your long prompt is here) ...
                             ### FAQs ###
                             {profile.faqs}
                             """
                             
-                            # 2. Connect to the AI and get a response
                             load_dotenv()
                             genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
                             model = genai.GenerativeModel('gemini-1.5-flash-latest')
@@ -378,11 +394,9 @@ def webhook_view(request):
                             response = chat_session.send_message(system_prompt + "\n\nCustomer message: " + message_text)
                             ai_reply = response.text
                             
-                            # 3. For testing, print the AI's reply to the logs
-                            print(f"--- Message for Business: {profile.business_name} ---")
-                            print(f"Customer says: '{message_text}'")
-                            print(f"AI Reply: '{ai_reply}'")
-                            print(f"---------------------------------------------")
+                            # --- THIS IS THE FINAL CHANGE (STEP 4) ---
+                            # Replace the print statement with the send function
+                            send_facebook_message(sender_id, ai_reply, page_access_token)
 
                         except FacebookPage.DoesNotExist:
                             print(f"Received message for an unknown Page ID: {recipient_id}")
