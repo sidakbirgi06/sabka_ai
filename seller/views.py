@@ -313,6 +313,7 @@ def send_facebook_message(recipient_id, message_text):
 def webhook_view(request):
     # Handle the one-time verification GET request from Meta
     if request.method == 'GET':
+        # ... (This part remains the same as before) ...
         verify_token = os.environ.get('WEBHOOK_VERIFY_TOKEN')
         mode = request.GET.get('hub.mode')
         token = request.GET.get('hub.verify_token')
@@ -323,35 +324,45 @@ def webhook_view(request):
         else:
             return HttpResponse('Error, invalid verification token', status=403)
     
-    # --- THIS IS THE NEW, UPGRADED PART ---
     # Handle incoming messages (POST requests) from users
     if request.method == 'POST':
         data = json.loads(request.body)
-
-        # Safety check to make sure we are getting a page update
         if data.get("object") == "page":
-            # Loop through the entries, as there can be multiple in a batch
             for entry in data.get("entry", []):
                 for messaging_event in entry.get("messaging", []):
-                    # Check if this is a message event
                     if messaging_event.get("message"):
-                        # Extract the key information
-                        sender_id = messaging_event["sender"]["id"]      # The user's ID
-                        recipient_id = messaging_event["recipient"]["id"]  # Your Page's ID
-                        message_text = messaging_event["message"]["text"]  # The message they sent
+                        sender_id = messaging_event["sender"]["id"]      
+                        recipient_id = messaging_event["recipient"]["id"]  
+                        message_text = messaging_event["message"]["text"]  
 
-                        # For testing, let's print what we received to the logs
-                        print(f"--- New Message ---")
-                        print(f"From Sender ID: {sender_id}")
-                        print(f"To Page ID: {recipient_id}")
-                        print(f"Message: '{message_text}'")
-                        print(f"--------------------")
+                        # --- THIS IS THE NEW "DETECTIVE WORK" LOGIC ---
+                        try:
+                            # 1. Use the recipient_id to find the correct FacebookPage entry
+                            facebook_page = FacebookPage.objects.get(page_id=recipient_id)
+                            
+                            # 2. Get the user and their profiles linked to that page
+                            user = facebook_page.user
+                            profile = user.businessprofile
+                            settings = profile.chatbotsettings
+                            page_access_token = facebook_page.page_access_token
+
+                            # 3. For testing, print the details we found
+                            print(f"--- Message for Business: {profile.business_name} ---")
+                            print(f"AI Name: {settings.ai_name}")
+                            print(f"From Sender ID: {sender_id}")
+                            print(f"Message: '{message_text}'")
+                            print(f"---------------------------------------------")
+
+                        except FacebookPage.DoesNotExist:
+                            # This is our safety net. If a message comes in for a page
+                            # that is not in our database, we just ignore it.
+                            print(f"Received message for an unknown Page ID: {recipient_id}")
+                            pass # Do nothing
 
         # We must return a 200 OK to Facebook to show we received the message.
         return HttpResponse(status=200)
 
     return HttpResponse("Unsupported method", status=405)
-
 
 
 @login_required
