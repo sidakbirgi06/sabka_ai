@@ -311,20 +311,19 @@ def send_facebook_message(recipient_id, message_text):
 #WEBHOOK VIEW
 @csrf_exempt
 def webhook_view(request):
-    # Handle the one-time verification GET request from Meta
+    # Handle the GET request for verification
     if request.method == 'GET':
-        # ... (This part remains the same as before) ...
+        # ... (This part remains the same) ...
         verify_token = os.environ.get('WEBHOOK_VERIFY_TOKEN')
         mode = request.GET.get('hub.mode')
         token = request.GET.get('hub.verify_token')
         challenge = request.GET.get('hub.challenge')
         if mode == 'subscribe' and token == verify_token:
-            print('WEBHOOK_VERIFIED')
             return HttpResponse(challenge, status=200)
         else:
             return HttpResponse('Error, invalid verification token', status=403)
     
-    # Handle incoming messages (POST requests) from users
+    # Handle POST requests with incoming messages
     if request.method == 'POST':
         data = json.loads(request.body)
         if data.get("object") == "page":
@@ -335,31 +334,63 @@ def webhook_view(request):
                         recipient_id = messaging_event["recipient"]["id"]  
                         message_text = messaging_event["message"]["text"]  
 
-                        # --- THIS IS THE NEW "DETECTIVE WORK" LOGIC ---
                         try:
-                            # 1. Use the recipient_id to find the correct FacebookPage entry
+                            # Step 2 logic: Find the seller and their settings
                             facebook_page = FacebookPage.objects.get(page_id=recipient_id)
-                            
-                            # 2. Get the user and their profiles linked to that page
-                            user = facebook_page.user
-                            profile = user.businessprofile
+                            profile = facebook_page.user.businessprofile
                             settings = profile.chatbotsettings
-                            page_access_token = facebook_page.page_access_token
+                            page_access_token = facebook_page.page_access_token # We'll use this in the next step
 
-                            # 3. For testing, print the details we found
+                            # --- THIS IS THE NEW "AI BRAIN" LOGIC (STEP 3) ---
+
+                            # 1. Build the System Prompt (the "Briefing Document")
+                            system_prompt = f"""
+                            You are an expert AI assistant for the business named '{profile.business_name}'.
+                            Your assigned name is '{settings.ai_name}'. Your personality must be: '{settings.personality}'.
+
+                            ### CORE INSTRUCTIONS ###
+                            Your primary goal is to answer customer questions based ONLY on the business information provided.
+                            Adhere to your personality traits: Greet new customers with '{settings.greeting}'. {'You MUST use emojis.' if settings.use_emojis else 'Do not use emojis.'} Your signature closing line is '{settings.signature_line}'. You must NEVER use these words or phrases: '{settings.phrases_to_avoid}'.
+
+                            ### BUSINESS INFORMATION ###
+                            - Description: {profile.description}
+                            - Contact: Phone: {profile.contact_number}, Email: {profile.business_email}
+                            - Address / Location: {profile.address}
+                            - Operating Hours: {profile.operating_hours}
+                            - Product Categories: {profile.product_categories}
+                            - Top-Selling Products: {profile.top_selling_products}
+                            - Deals/Combos: {profile.combo_packs}
+                            - Payment Methods: COD: {'Yes' if profile.accepts_cod else 'No'}, UPI: {'Yes' if profile.accepts_upi else 'No'}, Card: {'Yes' if profile.accepts_card else 'No'}
+                            - Delivery Methods: {profile.delivery_methods}
+                            - Return/Refund Policy: {profile.return_policy}
+                            - Social Media: {profile.social_media_links}
+
+                            ### FAQs ###
+                            {profile.faqs}
+                            """
+                            
+                            # 2. Connect to the AI and get a response
+                            load_dotenv()
+                            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+                            model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                            
+                            chat_session = model.start_chat(history=[])
+                            response = chat_session.send_message(system_prompt + "\n\nCustomer message: " + message_text)
+                            ai_reply = response.text
+                            
+                            # 3. For testing, print the AI's reply to the logs
                             print(f"--- Message for Business: {profile.business_name} ---")
-                            print(f"AI Name: {settings.ai_name}")
-                            print(f"From Sender ID: {sender_id}")
-                            print(f"Message: '{message_text}'")
+                            print(f"Customer says: '{message_text}'")
+                            print(f"AI Reply: '{ai_reply}'")
                             print(f"---------------------------------------------")
 
                         except FacebookPage.DoesNotExist:
-                            # This is our safety net. If a message comes in for a page
-                            # that is not in our database, we just ignore it.
                             print(f"Received message for an unknown Page ID: {recipient_id}")
-                            pass # Do nothing
+                            pass 
+                        except Exception as e:
+                            print(f"An error occurred: {e}")
 
-        # We must return a 200 OK to Facebook to show we received the message.
+
         return HttpResponse(status=200)
 
     return HttpResponse("Unsupported method", status=405)
