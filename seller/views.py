@@ -418,19 +418,3 @@ def facebook_connect(request):
     )
     
     return redirect(auth_url)
-
-
-
-
-def create_superuser_temp(request):
-    username = 'SidakBirgi'
-    # LET'S SET A NEW, SLIGHTLY DIFFERENT PASSWORD TO BE SURE
-    new_password = 'Sidakbirgi@2336' 
-
-    try:
-        user = User.objects.get(username=username)
-        user.set_password(new_password)
-        user.save()
-        return HttpResponse(f"Admin user '{username}' password has been reset successfully! Your new password is: {new_password}. PLEASE REMOVE THIS URL AND VIEW NOW.")
-    except User.DoesNotExist:
-        return HttpResponse(f"Admin user '{username}' does not exist. Something is wrong. PLEASE REMOVE THIS URL AND VIEW NOW.")
