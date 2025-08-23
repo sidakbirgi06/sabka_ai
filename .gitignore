@@ -9,3 +9,7 @@ db.sqlite3
 
 # Ignore the file where API key is stored
 .env
+
+
+# Ignore the secret environment file
+.env

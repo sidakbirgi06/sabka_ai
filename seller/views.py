@@ -11,6 +11,10 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 import requests
+from django.conf import settings
+from django.urls import reverse
+from django.contrib.auth.models import User
+
 
 # === FOR HOME PAGE ===
 def home(request):
@@ -396,3 +400,41 @@ def debug_view(request):
         'profiles': all_profiles
     }
     return render(request, 'seller/debug_data.html', context)
+
+
+
+
+def facebook_connect(request):
+    APP_ID = os.environ.get('FACEBOOK_APP_ID')
+    redirect_uri = request.build_absolute_uri(reverse('facebook_callback'))
+    scope = 'pages_show_list,pages_messaging,public_profile'
+    
+    auth_url = (
+        f"https://www.facebook.com/v19.0/dialog/oauth?"
+        f"client_id={APP_ID}&"
+        f"redirect_uri={redirect_uri}&"
+        f"scope={scope}&"
+        f"response_type=code"
+    )
+    
+    return redirect(auth_url)
+
+
+
+
+
+
+#TEMPRORY FUNCTIONS TO CREATE SUPERUSER
+
+def create_superuser_temp(request):
+    # IMPORTANT: CHOOSE YOUR OWN USERNAME, EMAIL, AND A STRONG PASSWORD
+    username = 'admin'
+    email = 'your-email@example.com'
+    password = 'YourStrongPassword123!'
+
+    # Check if the user already exists to avoid errors
+    if not User.objects.filter(username=username).exists():
+        User.objects.create_superuser(username, email, password)
+        return HttpResponse("Admin user created successfully! PLEASE REMOVE THIS URL AND VIEW NOW.")
+    else:
+        return HttpResponse("Admin user already exists. PLEASE REMOVE THIS URL AND VIEW NOW.")

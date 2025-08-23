@@ -104,3 +104,14 @@ class ChatbotSettings(models.Model):
     
     class Meta:
         verbose_name_plural = "Chatbot settings"
+
+
+
+class FacebookPage(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    page_id = models.CharField(max_length=100, unique=True)
+    page_name = models.CharField(max_length=255)
+    page_access_token = models.TextField()
+
+    def __str__(self):
+        return f"{self.page_name} for {self.user.username}"
