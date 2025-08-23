@@ -418,27 +418,3 @@ def facebook_connect(request):
     )
     
     return redirect(auth_url)
-
-
-
-    
-
-
-def create_superuser_temp(request):
-    # --- PLEASE EDIT THESE DETAILS TO YOUR LIKING ---
-    new_username = "sidak_birgi"
-    new_email = "sidakbirgi06@gmail.com"
-    new_password = "Sidakbirgi@2336"
-    
-    # This will create the user only if they don't already exist
-    if not User.objects.filter(username=new_username).exists():
-        User.objects.create_superuser(new_username, new_email, new_password)
-        return HttpResponse(
-            f"Superuser '{new_username}' created successfully in the permanent database! "
-            f"You can now log in. PLEASE REMOVE THIS URL AND VIEW NOW."
-        )
-    else:
-        return HttpResponse(
-            f"Superuser '{new_username}' already exists. "
-            "You can log in. PLEASE REMOVE THIS URL AND VIEW NOW."
-        )
