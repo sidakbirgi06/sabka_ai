@@ -32,5 +32,7 @@ urlpatterns = [
     path('debug-data/', views.debug_view, name='debug_data'),
 
     path('facebook/connect/', views.facebook_connect, name='facebook_connect'),
+
+    path('facebook/callback/', views.facebook_callback, name='facebook_callback'),
  
 ]

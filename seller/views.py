@@ -14,6 +14,7 @@ import requests
 from django.conf import settings
 from django.urls import reverse
 from django.contrib.auth.models import User
+from .models import FacebookPage
 
 
 # === FOR HOME PAGE ===
@@ -404,6 +405,8 @@ def debug_view(request):
 
 
 
+
+
 def facebook_connect(request):
     APP_ID = os.environ.get('FACEBOOK_APP_ID')
     redirect_uri = request.build_absolute_uri(reverse('facebook_callback'))
@@ -418,3 +421,59 @@ def facebook_connect(request):
     )
     
     return redirect(auth_url)
+
+
+
+def facebook_callback(request):
+    # 1. Get the temporary 'code' from the URL
+    code = request.GET.get('code')
+    if not code:
+        # Handle the error case where the user denied permission or something went wrong
+        return redirect('dashboard') # Redirect to dashboard or an error page
+
+    # 2. Exchange the code for a user access token
+    APP_ID = os.environ.get('FACEBOOK_APP_ID')
+    APP_SECRET = os.environ.get('FACEBOOK_APP_SECRET')
+    redirect_uri = request.build_absolute_uri(reverse('facebook_callback'))
+
+    token_url = (
+        f"https://graph.facebook.com/v19.0/oauth/access_token?"
+        f"client_id={APP_ID}&"
+        f"redirect_uri={redirect_uri}&"
+        f"client_secret={APP_SECRET}&"
+        f"code={code}"
+    )
+
+    response = requests.get(token_url)
+    user_token_data = response.json()
+    user_access_token = user_token_data.get('access_token')
+
+    if not user_access_token:
+        # Handle error: couldn't get the token
+        return redirect('dashboard')
+
+    # 3. Get the list of pages the user manages
+    pages_url = f"https://graph.facebook.com/me/accounts?access_token={user_access_token}"
+    response = requests.get(pages_url)
+    pages_data = response.json()
+
+    # For simplicity, we'll use the first page in the list.
+    if pages_data and 'data' in pages_data and len(pages_data['data']) > 0:
+        page_info = pages_data['data'][0]
+        page_id = page_info['id']
+        page_name = page_info['name']
+        page_access_token = page_info['access_token']
+
+        # 4. Save the connection details to the database
+        FacebookPage.objects.update_or_create(
+            user=request.user,
+            defaults={
+                'page_id': page_id,
+                'page_name': page_name,
+                'page_access_token': page_access_token
+            }
+        )
+
+    # 5. Redirect to a success page or the dashboard
+    # ---- IMPORTANT: Change this to your actual dashboard URL name ----
+    return redirect('dashboard')
