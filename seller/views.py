@@ -19,18 +19,7 @@ from .models import FacebookPage
 
 # === FOR HOME PAGE ===
 def home(request):
-    is_connected = False # Default value for guests
-
-    # First, we check if the visitor is actually a logged-in user
-    if request.user.is_authenticated:
-        # If they are logged in, THEN we check the database for a connection
-        is_connected = FacebookPage.objects.filter(user=request.user).exists()
-
-    # We pass the result (True or False) to the template
-    context = {
-        'is_connected': is_connected
-    }
-    return render(request, 'seller/home.html', context)
+    return render(request, 'seller/home.html')
 
 # FOR SIGNUP PAGE
 def signup(request):
@@ -193,16 +182,14 @@ def chatbot_setup_step3(request):
 # DASHBOARD
 @login_required
 def dashboard(request):
-    # We find the business profile that is linked to the currently logged-in user
     try:
         profile = request.user.businessprofile
     except BusinessProfile.DoesNotExist:
-        profile = None # This handles the case where a new user hasn't created a profile yet
+        profile = None
 
     context = {
         'profile': profile
     }
-
     return render(request, 'seller/dashboard.html', context)
 
 # INBOX
