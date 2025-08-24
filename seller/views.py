@@ -490,7 +490,7 @@ def facebook_callback(request):
     code = request.GET.get('code')
     if not code:
         # Handle the error case where the user denied permission or something went wrong
-        return redirect('dashboard')  # Redirect to dashboard or an error page
+        return redirect('home')  # Redirect to home or an error page
 
     # 2. Exchange the code for a user access token
     APP_ID = os.environ.get('FACEBOOK_APP_ID')
@@ -510,9 +510,10 @@ def facebook_callback(request):
     user_access_token = user_token_data.get('access_token')
 
     if not user_access_token:
+        
         # Handle error: couldn't get the token
         print("Error: could not get user access token:", user_token_data)
-        return redirect('dashboard')
+        return redirect('home')
 
     # 3. Get the list of pages the user manages
     pages_url = f"https://graph.facebook.com/me/accounts?access_token={user_access_token}"
@@ -521,7 +522,7 @@ def facebook_callback(request):
 
     if not pages_data or 'data' not in pages_data or len(pages_data['data']) == 0:
         print("Error: no managed pages found:", pages_data)
-        return redirect('dashboard')
+        return redirect('home')
 
     # For simplicity, we'll use the first page in the list.
     page_info = pages_data['data'][0]
@@ -549,5 +550,5 @@ def facebook_callback(request):
 
     print("Subscribe response:", subscribe_response.status_code, subscribe_response.text)
 
-    # 6. Redirect to dashboard (or success page)
-    return redirect('dashboard')
+    # 6. Redirect to home (or success page)
+    return redirect('home')
