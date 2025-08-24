@@ -354,23 +354,64 @@ def send_facebook_message(recipient_id, message_text, page_access_token):
 
 @csrf_exempt
 def webhook_view(request):
-    # --- TEMPORARY DUMMY WEBHOOK FOR TESTING THE CONNECTION ---
-
-    # This handles the verification GET request from Facebook
+    # Handle the GET request for verification
     if request.method == 'GET':
+        verify_token = os.environ.get('WEBHOOK_VERIFY_TOKEN')
+        mode = request.GET.get('hub.mode')
+        token = request.GET.get('hub.verify_token')
         challenge = request.GET.get('hub.challenge')
-        if challenge:
-            print("Webhook verification GET request received successfully by dummy view.")
+        if mode == 'subscribe' and token == verify_token:
             return HttpResponse(challenge, status=200)
         else:
-            return HttpResponse("GET request received, but not a verification request.", status=400)
+            return HttpResponse('Error, invalid verification token', status=403)
 
-    # This handles the POST request (for the Test button)
+    # Handle POST requests with incoming messages
     if request.method == 'POST':
-        print("POST request received successfully by dummy view.")
+        data = json.loads(request.body)
+        if data.get("object") == "page":
+            for entry in data.get("entry", []):
+                for messaging_event in entry.get("messaging", []):
+                    if messaging_event.get("message"):
+                        sender_id = messaging_event["sender"]["id"]      
+                        recipient_id = messaging_event["recipient"]["id"]  
+                        message_text = messaging_event["message"]["text"]  
+
+                        try:
+                            # Find the seller and their settings
+                            facebook_page = FacebookPage.objects.get(page_id=recipient_id)
+                            profile = facebook_page.user.businessprofile
+                            settings = profile.chatbotsettings
+                            page_access_token = facebook_page.page_access_token
+
+                            # Integrate the "AI Brain"
+                            system_prompt = f"""
+                            You are an expert AI assistant for the business named '{profile.business_name}'.
+                            Your assigned name is '{settings.ai_name}'. Your personality must be: '{settings.personality}'.
+                            # ... (the rest of your long prompt is here) ...
+                            ### FAQs ###
+                            {profile.faqs}
+                            """
+
+                            load_dotenv()
+                            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+                            model = genai.GenerativeModel('gemini-1.5-flash-latest')
+
+                            chat_session = model.start_chat(history=[])
+                            response = chat_session.send_message(system_prompt + "\n\nCustomer message: " + message_text)
+                            ai_reply = response.text
+
+                            # Send the reply back to Facebook
+                            send_facebook_message(sender_id, ai_reply, page_access_token)
+
+                        except FacebookPage.DoesNotExist:
+                            print(f"Received message for an unknown Page ID: {recipient_id}")
+                            pass 
+                        except Exception as e:
+                            print(f"An error occurred: {e}")
+
         return HttpResponse(status=200)
 
-    return HttpResponse("Unsupported method.", status=405)
+    return HttpResponse("Unsupported method", status=405)
 
 
 @login_required
