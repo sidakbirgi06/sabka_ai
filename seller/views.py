@@ -298,22 +298,6 @@ def chat_view(request):
     return render(request, 'seller/chat.html', context)
 
 
-# This function sends a reply back to the user on Facebook Messenger
-def send_facebook_message(recipient_id, message_text):
-    page_access_token = os.environ.get('FACEBOOK_PAGE_ACCESS_TOKEN')
-    params = { "access_token": page_access_token }
-    headers = { "Content-Type": "application/json" }
-    data = {
-        "recipient": { "id": recipient_id },
-        "message": { "text": message_text },
-        "messaging_type": "RESPONSE"
-    }
-    # We are using v19.0 of the Graph API
-    r = requests.post("https://graph.facebook.com/v19.0/me/messages", params=params, headers=headers, json=data)
-    if r.status_code != 200:
-        # We print any errors to the Render logs for debugging
-        print(f"Error sending message: {r.status_code} {r.text}")
-
 
 # HELPER FUNCTION TO SEND MESSAGES
 def send_facebook_message(recipient_id, message_text, page_access_token):
