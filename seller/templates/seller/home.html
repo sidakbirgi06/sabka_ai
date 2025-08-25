@@ -1,6 +1,66 @@
 {% extends 'seller/app_base.html' %}
 
 {% block app_content %}
+
     <h1>Home Dashboard</h1>
     <p>Welcome! Use the navigation bar at the top to manage your application.</p>
+
+
+    <style>
+        .assistant-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 350px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            font-family: sans-serif;
+            display: flex; /* Changed for JS control */
+            flex-direction: column;
+            z-index: 1000;
+        }
+        .widget-header {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .widget-header h5 { margin: 0; font-size: 16px; }
+        .widget-body { display: flex; flex-direction: column; height: 400px; }
+        .message-area { flex-grow: 1; padding: 15px; overflow-y: auto; background-color: #f9f9f9; }
+        .message { display: flex; margin-bottom: 10px; }
+        .message p { margin: 0; padding: 10px; border-radius: 15px; word-wrap: break-word; max-width: 250px; }
+        .message.bot { justify-content: flex-start; }
+        .message.bot p { background-color: #e9e9eb; color: #333; }
+        .message.user { justify-content: flex-end; }
+        .message.user p { background-color: #007bff; color: white; }
+        .input-area { display: flex; padding: 10px; border-top: 1px solid #ddd; }
+        .input-area input { flex-grow: 1; border: 1px solid #ccc; padding: 8px; border-radius: 20px; margin-right: 10px; }
+        .input-area button { background-color: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; }
+        .input-area button:hover { background-color: #0056b3; }
+    </style>
+
+
+    <div id="assistant-widget" class="assistant-widget">
+        <div class="widget-header">
+            <h5>Business Assistant</h5>
+        </div>
+        <div class="widget-body">
+            <div class="message-area">
+                <div class="message bot">
+                    <p>Hello! How can I help you manage your business today?</p>
+                </div>
+            </div>
+            <div class="input-area">
+                <input type="text" placeholder="Ask me anything...">
+                <button>Send</button>
+            </div>
+        </div>
+    </div>
+
 {% endblock app_content %}
