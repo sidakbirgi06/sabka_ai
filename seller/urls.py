@@ -34,5 +34,7 @@ urlpatterns = [
     path('facebook/connect/', views.facebook_connect, name='facebook_connect'),
 
     path('facebook/callback/', views.facebook_callback, name='facebook_callback'),
+
+    path('business-assistant/', views.business_assistant_page, name='business_assistant_page')
  
 ]
