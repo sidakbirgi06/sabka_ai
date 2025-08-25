@@ -4,6 +4,7 @@ from django.contrib.auth import login, logout
 from .forms import BusinessProfileStep1Form, BusinessProfileStep2Form, BusinessProfileStep3Form, BusinessProfileStep4Form, BusinessProfileStep5Form, ChatbotSettingsStep1Form, ChatbotSettingsStep2Form, ChatbotSettingsStep3Form
 from .models import BusinessProfile, ChatbotSettings
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -544,3 +545,29 @@ def facebook_callback(request):
 def business_assistant_page(request):
     # This comment is here to ensure the file is updated
     return render(request, 'seller/business_assistant_page.html')
+
+# This is our new API view function
+@login_required
+def business_assistant_api(request):
+    # We only want to accept 'POST' requests, which are used to send data
+    if request.method == 'POST':
+        try:
+            # Read the data sent from the frontend chat
+            data = json.loads(request.body)
+            user_message = data.get('message')
+
+            # For now, we'll just print the message to our terminal to confirm we received it
+            print(f"Message received from user '{request.user.username}': {user_message}")
+
+            # This is where we will eventually call the AI and tools.
+            # For now, we will just create a simple reply.
+            bot_reply = f"I am a simple echo bot. You said: '{user_message}'"
+
+            # Send the reply back to the frontend in JSON format
+            return JsonResponse({'reply': bot_reply})
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    # If the request method isn't POST, it's an invalid request for this URL
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
