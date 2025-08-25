@@ -539,3 +539,8 @@ def facebook_callback(request):
 
     # 6. Redirect to home (or success page)
     return redirect('home')
+
+@login_required
+def business_assistant_page(request):
+    # This comment is here to ensure the file is updated
+    return render(request, 'seller/business_assistant_page.html')
