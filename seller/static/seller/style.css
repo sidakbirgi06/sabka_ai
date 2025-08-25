@@ -48,19 +48,6 @@ button:hover {
   font-weight: bold;
 }
 
-.nav-button {
-  padding: 8px 12px;
-  margin-left: 10px;
-  background-color: #e9ecef;
-  border-radius: 5px;
-  font-size: 0.9em;
-  color: #333;
-}
-
-.nav-button:hover {
-  background-color: #ced4da;
-}
-
 .home-main {
   flex-grow: 1; /* Allows this section to grow and take up available space */
   display: flex;
@@ -232,71 +219,6 @@ body.login-page {
     font-style: italic;
 }
 
-/* --- New Main App Layout with Top Header --- */
-.main-header {
-    /* This is the key command that makes things go left-to-right */
-    display: flex;
-    justify-content: space-between; /* Pushes logo left, and nav/user right */
-    align-items: center;
-    padding: 15px 40px;
-    background-color: #ffffff;
-    border-bottom: 1px solid #e7e7e7;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-}
-
-.logo-container a {
-    font-size: 1.5em;
-    font-weight: bold;
-    color: #333;
-    text-decoration: none;
-}
-
-.main-nav ul {
-    list-style: none; /* This removes the bullet points */
-    margin: 0;
-    padding: 0;
-    display: flex; /* This lines up the links (Dashboard, Inbox, etc.) horizontally */
-}
-
-.main-nav ul li {
-    margin-left: 30px; /* Space between the navigation links */
-}
-
-.main-nav ul li a {
-    color: #555;
-    text-decoration: none;
-    font-weight: bold;
-    font-size: 1em;
-}
-
-.main-nav ul li a:hover {
-    color: #007bff;
-}
-
-.user-info {
-    display: flex;
-    align-items: center;
-}
-
-.user-info span {
-    color: #555;
-}
-
-.logout-button {
-    background-color: #dc3545;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 5px;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-.logout-button:hover {
-    background-color: #c82333;
-}
 
 .main-content {
     padding: 40px;
@@ -352,4 +274,199 @@ body.login-page {
     padding: 10px;
     border-radius: 5px;
     margin-right: 10px;
+}
+
+
+/* ============================================= */
+/* NAVIGATION BAR REVAMP                */
+/* ============================================= */
+
+/* Main Header Container */
+.main-header {
+    display: flex;
+    justify-content: space-between; /* Pushes logo to the left and nav/user to the right */
+    align-items: center;
+    padding: 1rem 2rem; /* Adds nice spacing */
+    background-color: #ffffff;
+    border-bottom: 1px solid #e0e0e0; /* Subtle separator line */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+/* Logo Styling */
+.logo-container a {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #333;
+    text-decoration: none;
+}
+
+/* Navigation Links Container */
+.main-nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem; /* Space between nav items */
+}
+
+/* Standard Navigation Links */
+.main-nav a {
+    text-decoration: none;
+    color: #555;
+    font-weight: 500;
+    padding: 0.5rem 0;
+    position: relative;
+    transition: color 0.3s ease;
+}
+
+/* Cool hover effect for links */
+.main-nav a::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: #007bff;
+    transform: scaleX(0);
+    transform-origin: bottom right;
+    transition: transform 0.3s ease;
+}
+
+.main-nav a:hover {
+    color: #007bff;
+}
+
+.main-nav a:hover::after {
+    transform: scaleX(1);
+    transform-origin: bottom left;
+}
+
+/* Styling for special buttons like "Connect Facebook" */
+.nav-button-connect, .logout-button {
+    background-color: #007bff;
+    color: white !important; /* Use !important to override other link styles */
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease;
+}
+
+.nav-button-connect:hover, .logout-button:hover {
+    background-color: #0056b3;
+    color: white !important; /* Keep text color white on hover */
+}
+
+/* Remove hover underline from buttons */
+.nav-button-connect::after, .logout-button::after {
+    display: none;
+}
+
+/* Styling for the "Connected" status */
+.nav-connected {
+    color: #28a745; /* Green color for success */
+    font-weight: bold;
+    cursor: default;
+}
+
+/* User Info Section */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.user-info span {
+    font-weight: 500;
+    color: #333;
+}
+
+
+/* ============================================= */
+/* BUSINESS ASSISTANT CHAT PAGE            */
+/* ============================================= */
+
+.chat-page-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 80px); /* Full viewport height minus the header height */
+    background-color: #f4f7fa;
+}
+
+.chat-messages {
+    flex-grow: 1; /* Makes the message area take all available space */
+    overflow-y: auto; /* Adds scrolling for messages */
+    padding: 2rem;
+}
+
+.chat-message {
+    display: flex;
+    margin-bottom: 1.5rem;
+}
+
+.chat-message p {
+    margin: 0;
+    padding: 0.8rem 1rem;
+    border-radius: 18px;
+    max-width: 70%;
+    word-wrap: break-word;
+}
+
+.message-bot {
+    justify-content: flex-start;
+}
+
+.message-bot p {
+    background-color: #ffffff;
+    color: #333;
+    border: 1px solid #e0e0e0;
+}
+
+.message-user {
+    justify-content: flex-end;
+}
+
+.message-user p {
+    background-color: #007bff;
+    color: #ffffff;
+}
+
+.chat-input-bar {
+    padding: 1rem 2rem;
+    background-color: #ffffff;
+    border-top: 1px solid #e0e0e0;
+}
+
+.chat-input-form {
+    display: flex;
+    gap: 1rem;
+}
+
+.chat-input-form input {
+    flex-grow: 1;
+    border: 1px solid #ccc;
+    padding: 0.8rem;
+    border-radius: 25px;
+    font-size: 1rem;
+}
+
+.chat-input-form button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.chat-input-form button:hover {
+    background-color: #0056b3;
 }

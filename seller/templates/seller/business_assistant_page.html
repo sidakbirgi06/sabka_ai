@@ -1,6 +1,26 @@
 {% extends 'seller/app_base.html' %}
 
 {% block app_content %}
-    <h1>Business Assistant</h1>
-    <p>This is the new dedicated page for the Business Assistant feature.</p>
-    {% endblock app_content %}
+<div class="chat-page-container">
+    
+    <div class="chat-messages">
+
+        <div class="chat-message message-bot">
+            <p>Hello! I am your Business Assistant. You can ask me about your sales, inventory, or customer interactions. You can also tell me to make changes to your business profile or chatbot settings.</p>
+        </div>
+
+        <div class="chat-message message-user">
+            <p>How much revenue did I make yesterday?</p>
+        </div>
+
+    </div>
+
+    <div class="chat-input-bar">
+        <form class="chat-input-form">
+            <input type="text" placeholder="Ask me anything or give me a command...">
+            <button type="submit">Send</button>
+        </form>
+    </div>
+
+</div>
+{% endblock app_content %}
