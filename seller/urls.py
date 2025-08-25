@@ -22,6 +22,7 @@ urlpatterns = [
     
 
     path('dashboard/', views.dashboard, name='dashboard'),
+    
 
     path('inbox/', views.inbox, name='inbox'),
 
@@ -35,6 +36,6 @@ urlpatterns = [
 
     path('facebook/callback/', views.facebook_callback, name='facebook_callback'),
 
-    path('business-assistant/', views.business_assistant_page, name='business_assistant_page')
+    path('business-assistant/', views.business_assistant_page, name='business_assistant_page'),
  
 ]
