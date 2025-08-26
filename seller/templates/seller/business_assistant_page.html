@@ -23,4 +23,72 @@
     </div>
 
 </div>
+
+<script>
+    // Get the HTML elements we need to work with
+    const chatForm = document.querySelector('.chat-input-form');
+    const chatInput = chatForm.querySelector('input');
+    const messageArea = document.querySelector('.chat-messages');
+
+    // Listen for when the user submits the form (presses Send or Enter)
+    chatForm.addEventListener('submit', event => {
+        // Prevent the browser's default action of reloading the page
+        event.preventDefault();
+
+        // Get the user's message from the input box
+        const userMessage = chatInput.value.trim();
+
+        // If the message is empty, do nothing
+        if (!userMessage) {
+            return;
+        }
+
+        // 1. Display the user's message immediately
+        appendMessage('user', userMessage);
+
+        // Clear the input box for the next message
+        chatInput.value = '';
+
+        // 2. Send the user's message to the backend API
+        fetch('/api/business-assistant-chat/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: userMessage })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // 3. Receive the AI's response and display it
+            const botReply = data.reply;
+            appendMessage('bot', botReply);
+        })
+        .catch(error => {
+            // Handle any errors that occur during the API call
+            console.error('Error:', error);
+            appendMessage('bot', 'Sorry, I seem to be having trouble connecting to my brain right now. Please try again in a moment.');
+        });
+    });
+
+    // A helper function to add a new message to the chat window
+    function appendMessage(sender, text) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('chat-message');
+        
+        if (sender === 'user') {
+            messageDiv.classList.add('message-user');
+        } else {
+            messageDiv.classList.add('message-bot');
+        }
+
+        const paragraph = document.createElement('p');
+        paragraph.textContent = text;
+        messageDiv.appendChild(paragraph);
+        
+        messageArea.appendChild(messageDiv);
+
+        // Automatically scroll to the bottom to see the new message
+        messageArea.scrollTop = messageArea.scrollHeight;
+    }
+</script>
 {% endblock app_content %}

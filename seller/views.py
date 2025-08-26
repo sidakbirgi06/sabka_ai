@@ -15,6 +15,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.contrib.auth.models import User
 from .models import FacebookPage
+from .business_tools import get_business_info
 
 
 # === FOR HOME PAGE ===
@@ -540,7 +541,40 @@ def facebook_callback(request):
     # 6. Redirect to home (or success page)
     return redirect('home')
 
+# in seller/views.py
+
+# Configure the generative AI model
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+model = genai.GenerativeModel(
+    model_name='gemini-1.5-flash',
+    tools=[get_business_info] #<-- Tell the model about our tool
+)
+
+@csrf_exempt
 @login_required
-def business_assistant_page(request):
-    # This comment is here to ensure the file is updated
-    return render(request, 'seller/business_assistant_page.html')
+def business_assistant_api(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user_message = data.get('message')
+            if not user_message:
+                return JsonResponse({'error': 'No message provided'}, status=400)
+
+            # Start a chat session with the model
+            chat = model.start_chat(enable_automatic_function_calling=True)
+
+            # Send the user's message to the model
+            response = chat.send_message(user_message)
+
+            # The model will automatically handle calling the tool and generating a final response
+            bot_reply = response.text
+
+            return JsonResponse({'reply': bot_reply})
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            print(f"Error in business_assistant_api: {e}")
+            return JsonResponse({'error': 'An internal error occurred.'}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
