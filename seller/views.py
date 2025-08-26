@@ -19,6 +19,18 @@ from .models import FacebookPage
 from .business_tools import get_business_info
 
 
+
+try:
+    genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+    model = genai.GenerativeModel(
+        model_name='gemini-1.5-flash',
+        tools=[get_business_info]  # Tell the model about our tool
+    )
+except Exception as e:
+    print(f"Error configuring Generative AI model: {e}")
+    model = None
+
+
 # === FOR HOME PAGE ===
 def home(request):
     return render(request, 'seller/home.html')
@@ -551,10 +563,14 @@ model = genai.GenerativeModel(
     tools=[get_business_info] #<-- Tell the model about our tool
 )
 
+
+
 @csrf_exempt
 @login_required
-<<<<<<< HEAD
 def business_assistant_api(request):
+    if not model:
+        return JsonResponse({'error': 'AI model is not configured.'}, status=500)
+
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -564,48 +580,25 @@ def business_assistant_api(request):
 
             # Start a chat session with the model
             chat = model.start_chat(enable_automatic_function_calling=True)
-
+            
             # Send the user's message to the model
             response = chat.send_message(user_message)
-
-            # The model will automatically handle calling the tool and generating a final response
+            
+            # The model automatically handles calling the tool and generating a final response
             bot_reply = response.text
 
-=======
-def business_assistant_page(request):
-    # This comment is here to ensure the file is updated
-    return render(request, 'seller/business_assistant_page.html')
-
-# This is our new API view function
-@login_required
-def business_assistant_api(request):
-    # We only want to accept 'POST' requests, which are used to send data
-    if request.method == 'POST':
-        try:
-            # Read the data sent from the frontend chat
-            data = json.loads(request.body)
-            user_message = data.get('message')
-
-            # For now, we'll just print the message to our terminal to confirm we received it
-            print(f"Message received from user '{request.user.username}': {user_message}")
-
-            # This is where we will eventually call the AI and tools.
-            # For now, we will just create a simple reply.
-            bot_reply = f"I am a simple echo bot. You said: '{user_message}'"
-
-            # Send the reply back to the frontend in JSON format
->>>>>>> 9676bbbf2451e8dd00eb1ffae64c96eeb632c56d
             return JsonResponse({'reply': bot_reply})
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
-<<<<<<< HEAD
         except Exception as e:
             print(f"Error in business_assistant_api: {e}")
             return JsonResponse({'error': 'An internal error occurred.'}, status=500)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=405
 
-=======
 
-    # If the request method isn't POST, it's an invalid request for this URL
->>>>>>> 9676bbbf2451e8dd00eb1ffae64c96eeb632c56d
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+def business_assistant_page(request):
+    # This comment is here to ensure the file is updated
+    return render(request, 'seller/business_assistant_page.html')
+
