@@ -20,15 +20,12 @@ from .business_tools import get_business_info
 
 
 
-try:
-    genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
-    model = genai.GenerativeModel(
-        model_name='gemini-1.5-flash',
-        tools=[get_business_info]  # Tell the model about our tool
-    )
-except Exception as e:
-    print(f"Error configuring Generative AI model: {e}")
-    model = None
+# We have REMOVED the try/except block for debugging purposes
+genai.configure(api_key=os.environ.get("GOOGLE_API_KEY")) # Or the name you used
+model = genai.GenerativeModel(
+    model_name='gemini-1.5-flash',
+    tools=[get_business_info]
+)
 
 
 # === FOR HOME PAGE ===
