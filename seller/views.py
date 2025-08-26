@@ -25,7 +25,7 @@ try:
     model = genai.GenerativeModel(
         model_name='gemini-1.5-flash',
         tools=[get_business_info]  # Tell the model about our tool
-    ) # <--- MAKE SURE THIS LINE IS HERE
+    )
 except Exception as e:
     print(f"Error configuring Generative AI model: {e}")
     model = None
