@@ -36,6 +36,6 @@ urlpatterns = [
 
     path('facebook/callback/', views.facebook_callback, name='facebook_callback'),
 
-    path('api/business-assistant-chat/', views.business_assistant_api, name='business_assistant_api'),
+    path('business-assistant/', views.business_assistant_page, name='business_assistant_page'),
  
 ]
