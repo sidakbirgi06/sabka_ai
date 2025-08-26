@@ -21,7 +21,7 @@ from .business_tools import get_business_info
 
 
 try:
-    genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+    genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
     model = genai.GenerativeModel(
         model_name='gemini-1.5-flash',
         tools=[get_business_info]  # Tell the model about our tool
