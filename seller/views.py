@@ -595,7 +595,7 @@ def business_assistant_api(request):
             print(f"Error in business_assistant_api: {e}")
             return JsonResponse({'error': 'An internal error occurred.'}, status=500)
     
-    return JsonResponse({'error': 'Invalid request method'}, status=405
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 
 def business_assistant_page(request):
