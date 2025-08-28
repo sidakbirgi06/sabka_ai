@@ -15,18 +15,13 @@ import requests
 from django.conf import settings
 from django.urls import reverse
 from django.contrib.auth.models import User
-from .models import FacebookPage
+from .models import SocialConnection
 from .business_tools import get_business_info
 from google.ai.generativelanguage import Part
 
 
 
-# We have REMOVED the try/except block for debugging purposes
-# genai.configure(api_key=os.environ.get("GOOGLE_API_KEY")) # Or the name you used
-# model = genai.GenerativeModel(
-#     model_name='gemini-1.5-flash',
-#     tools=[get_business_info]
-# )
+
 
 
 # === FOR HOME PAGE ===
@@ -335,10 +330,12 @@ def send_facebook_message(recipient_id, message_text, page_access_token):
 
 # WEBHOOK FUNCTION
 
+# in seller/views.py
+
 @csrf_exempt
 def webhook_view(request):
-    # Handle the GET request for verification
     if request.method == 'GET':
+        # This is the webhook verification, it's the same for both platforms
         verify_token = os.environ.get('WEBHOOK_VERIFY_TOKEN')
         mode = request.GET.get('hub.mode')
         token = request.GET.get('hub.verify_token')
@@ -348,49 +345,55 @@ def webhook_view(request):
         else:
             return HttpResponse('Error, invalid verification token', status=403)
 
-    # Handle POST requests with incoming messages
     if request.method == 'POST':
         data = json.loads(request.body)
-        if data.get("object") == "page":
-            for entry in data.get("entry", []):
-                for messaging_event in entry.get("messaging", []):
-                    if messaging_event.get("message"):
-                        sender_id = messaging_event["sender"]["id"]      
-                        recipient_id = messaging_event["recipient"]["id"]  
-                        message_text = messaging_event["message"]["text"]  
+        
+        # Determine if the message is from Instagram or Facebook
+        platform = data.get("object") # This will be 'instagram' or 'page'
 
-                        try:
-                            # Find the seller and their settings
-                            facebook_page = FacebookPage.objects.get(page_id=recipient_id)
-                            profile = facebook_page.user.businessprofile
-                            settings = profile.chatbotsettings
-                            page_access_token = facebook_page.page_access_token
+        for entry in data.get("entry", []):
+            for messaging_event in entry.get("messaging", []):
+                if messaging_event.get("message"):
+                    sender_id = messaging_event["sender"]["id"]
+                    recipient_id = messaging_event["recipient"]["id"]
+                    message_text = messaging_event["message"]["text"]
 
-                            # Integrate the "AI Brain"
-                            system_prompt = f"""
-                            You are an expert AI assistant for the business named '{profile.business_name}'.
-                            Your assigned name is '{settings.ai_name}'. Your personality must be: '{settings.personality}'.
-                            # ... (the rest of your long prompt is here) ...
-                            ### FAQs ###
-                            {profile.faqs}
-                            """
+                    try:
+                        # Find the correct SocialConnection based on page_id AND platform
+                        platform_name = 'instagram' if platform == 'instagram' else 'facebook'
+                        connection = SocialConnection.objects.get(page_id=recipient_id, platform=platform_name)
+                        
+                        profile = connection.user.businessprofile
+                        settings = profile.chatbotsettings
+                        page_access_token = connection.page_access_token
 
-                            load_dotenv()
-                            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-                            model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                        # The AI Brain and System Prompt are the same for both
+                        system_prompt = f"""
+                        You are an expert AI assistant for the business named '{profile.business_name}'.
+                        Your assigned name is '{settings.ai_name}'. Your personality must be: '{settings.personality}'.
+                        # ... (rest of your long prompt) ...
+                        ### FAQs ###
+                        {profile.faqs}
+                        """
 
-                            chat_session = model.start_chat(history=[])
-                            response = chat_session.send_message(system_prompt + "\n\nCustomer message: " + message_text)
-                            ai_reply = response.text
+                        load_dotenv()
+                        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+                        model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
-                            # Send the reply back to Facebook
-                            send_facebook_message(sender_id, ai_reply, page_access_token)
+                        chat_session = model.start_chat(history=[])
+                        response = chat_session.send_message(system_prompt + "\n\nCustomer message: " + message_text)
+                        ai_reply = response.text
 
-                        except FacebookPage.DoesNotExist:
-                            print(f"Received message for an unknown Page ID: {recipient_id}")
-                            pass 
-                        except Exception as e:
-                            print(f"An error occurred: {e}")
+                        # Send the reply back to the correct platform
+                        # For now, the sending logic is the same, so we can reuse the function.
+                        # In the future, we might need a separate send_instagram_message function.
+                        send_facebook_message(sender_id, ai_reply, page_access_token)
+
+                    except SocialConnection.DoesNotExist:
+                        print(f"Received message for an unknown Page/Account ID: {recipient_id}")
+                        pass 
+                    except Exception as e:
+                        print(f"An error occurred in webhook: {e}")
 
         return HttpResponse(status=200)
 
@@ -407,150 +410,6 @@ def debug_view(request):
 
 
 
-
-
-
-def facebook_connect(request):
-    APP_ID = os.environ.get('FACEBOOK_APP_ID')
-    redirect_uri = request.build_absolute_uri(reverse('facebook_callback'))
-    scope = 'pages_show_list,pages_messaging,public_profile'
-    
-    auth_url = (
-        f"https://www.facebook.com/v19.0/dialog/oauth?"
-        f"client_id={APP_ID}&"
-        f"redirect_uri={redirect_uri}&"
-        f"scope={scope}&"
-        f"response_type=code"
-    )
-    
-    return redirect(auth_url)
-
-
-
-# def facebook_callback(request):
-#     # 1. Get the temporary 'code' from the URL
-#     code = request.GET.get('code')
-#     if not code:
-#         # Handle the error case where the user denied permission or something went wrong
-#         return redirect('dashboard') # Redirect to dashboard or an error page
-
-#     # 2. Exchange the code for a user access token
-#     APP_ID = os.environ.get('FACEBOOK_APP_ID')
-#     APP_SECRET = os.environ.get('FACEBOOK_APP_SECRET')
-#     redirect_uri = request.build_absolute_uri(reverse('facebook_callback'))
-
-#     token_url = (
-#         f"https://graph.facebook.com/v19.0/oauth/access_token?"
-#         f"client_id={APP_ID}&"
-#         f"redirect_uri={redirect_uri}&"
-#         f"client_secret={APP_SECRET}&"
-#         f"code={code}"
-#     )
-
-#     response = requests.get(token_url)
-#     user_token_data = response.json()
-#     user_access_token = user_token_data.get('access_token')
-
-#     if not user_access_token:
-#         # Handle error: couldn't get the token
-#         return redirect('dashboard')
-
-#     # 3. Get the list of pages the user manages
-#     pages_url = f"https://graph.facebook.com/me/accounts?access_token={user_access_token}"
-#     response = requests.get(pages_url)
-#     pages_data = response.json()
-
-#     # For simplicity, we'll use the first page in the list.
-#     if pages_data and 'data' in pages_data and len(pages_data['data']) > 0:
-#         page_info = pages_data['data'][0]
-#         page_id = page_info['id']
-#         page_name = page_info['name']
-#         page_access_token = page_info['access_token']
-
-#         # 4. Save the connection details to the database
-#         FacebookPage.objects.update_or_create(
-#             user=request.user,
-#             defaults={
-#                 'page_id': page_id,
-#                 'page_name': page_name,
-#                 'page_access_token': page_access_token
-#             }
-#         )
-
-#     # 5. Redirect to a success page or the dashboard
-#     # ---- IMPORTANT: Change this to your actual dashboard URL name ----
-#     return redirect('dashboard')
-
-
-
-
-def facebook_callback(request):
-    # 1. Get the temporary 'code' from the URL
-    code = request.GET.get('code')
-    if not code:
-        # Handle the error case where the user denied permission or something went wrong
-        return redirect('home')  # Redirect to home or an error page
-
-    # 2. Exchange the code for a user access token
-    APP_ID = os.environ.get('FACEBOOK_APP_ID')
-    APP_SECRET = os.environ.get('FACEBOOK_APP_SECRET')
-    redirect_uri = request.build_absolute_uri(reverse('facebook_callback'))
-
-    token_url = (
-        f"https://graph.facebook.com/v19.0/oauth/access_token?"
-        f"client_id={APP_ID}&"
-        f"redirect_uri={redirect_uri}&"
-        f"client_secret={APP_SECRET}&"
-        f"code={code}"
-    )
-
-    response = requests.get(token_url)
-    user_token_data = response.json()
-    user_access_token = user_token_data.get('access_token')
-
-    if not user_access_token:
-        
-        # Handle error: couldn't get the token
-        print("Error: could not get user access token:", user_token_data)
-        return redirect('home')
-
-    # 3. Get the list of pages the user manages
-    pages_url = f"https://graph.facebook.com/me/accounts?access_token={user_access_token}"
-    response = requests.get(pages_url)
-    pages_data = response.json()
-
-    if not pages_data or 'data' not in pages_data or len(pages_data['data']) == 0:
-        print("Error: no managed pages found:", pages_data)
-        return redirect('home')
-
-    # For simplicity, we'll use the first page in the list.
-    page_info = pages_data['data'][0]
-    page_id = page_info['id']
-    page_name = page_info['name']
-    page_access_token = page_info['access_token']
-
-    # 4. Save the connection details to the database
-    facebook_page, created = FacebookPage.objects.update_or_create(
-        user=request.user,
-        defaults={
-            'page_id': page_id,
-            'page_name': page_name,
-            'page_access_token': page_access_token
-        }
-    )
-
-    # 5. Subscribe the page to your webhook
-    subscribe_url = f"https://graph.facebook.com/v19.0/{page_id}/subscribed_apps"
-    params = {
-        "subscribed_fields": "messages,messaging_postbacks",
-        "access_token": page_access_token
-    }
-    subscribe_response = requests.post(subscribe_url, params=params)
-
-    print("Subscribe response:", subscribe_response.status_code, subscribe_response.text)
-
-    # 6. Redirect to home (or success page)
-    return redirect('home')
 
 
 # Configure the generative AI model
@@ -644,4 +503,126 @@ def business_assistant_api(request):
 def business_assistant_page(request):
     # This comment is here to ensure the file is updated
     return render(request, 'seller/business_assistant_page.html')
+
+
+
+
+
+# Add these three functions to views.py
+
+@login_required
+def facebook_connect(request):
+    app_id = os.environ.get('FACEBOOK_APP_ID')
+    redirect_uri = request.build_absolute_uri(reverse('oauth_callback'))
+    scope = 'pages_show_list,pages_messaging,public_profile'
+    state = 'facebook_flow' # We add a 'state' to know this is for Facebook
+    
+    auth_url = (
+        f"https://www.facebook.com/v19.0/dialog/oauth?"
+        f"client_id={app_id}&"
+        f"redirect_uri={redirect_uri}&"
+        f"scope={scope}&"
+        f"response_type=code&"
+        f"state={state}"
+    )
+    return redirect(auth_url)
+
+
+@login_required
+def instagram_connect(request):
+    app_id = os.environ.get('FACEBOOK_APP_ID')
+    redirect_uri = request.build_absolute_uri(reverse('oauth_callback'))
+    scope = 'instagram_basic,instagram_manage_messages,pages_show_list'
+    state = 'instagram_flow'
+
+    auth_url = (
+        f"https://www.facebook.com/v18.0/dialog/oauth?"
+        f"client_id={app_id}"
+        f"&redirect_uri={redirect_uri}"
+        f"&scope={scope}"
+        f"&response_type=code"
+        f"&state={state}"
+    )
+    return redirect(auth_url)
+
+
+# This is the single, unified callback view for both platforms
+def oauth_callback(request):
+    code = request.GET.get('code')
+    state = request.GET.get('state') # Get the state to check the platform
+
+    if not code:
+        return redirect('home')
+
+    # Exchange the code for a user access token (this is the same for both)
+    APP_ID = os.environ.get('FACEBOOK_APP_ID')
+    APP_SECRET = os.environ.get('FACEBOOK_APP_SECRET')
+    redirect_uri = request.build_absolute_uri(reverse('oauth_callback'))
+    
+    token_url = f"https://graph.facebook.com/v19.0/oauth/access_token?client_id={APP_ID}&redirect_uri={redirect_uri}&client_secret={APP_SECRET}&code={code}"
+    response = requests.get(token_url)
+    user_token_data = response.json()
+    user_access_token = user_token_data.get('access_token')
+
+    if not user_access_token:
+        print("Error getting user access token:", user_token_data)
+        return redirect('home')
+
+    # Determine which platform this callback is for
+    if state == 'instagram_flow':
+        # Get Instagram Business Accounts connected to the user's Facebook page
+        ig_accounts_url = f"https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account&access_token={user_access_token}"
+        response = requests.get(ig_accounts_url)
+        pages_data = response.json()
+
+        # Find the first page with an associated Instagram account
+        ig_account_info = None
+        if 'data' in pages_data:
+            for page in pages_data['data']:
+                if 'instagram_business_account' in page:
+                    ig_account_info = page['instagram_business_account']
+                    break
+        
+        if not ig_account_info:
+            print("Error: No Instagram Business Account found.")
+            return redirect('home')
+        
+        page_id = ig_account_info['id']
+        ig_user_url = f"https://graph.facebook.com/v19.0/{page_id}?fields=username&access_token={user_access_token}"
+        response = requests.get(ig_user_url)
+        ig_user_data = response.json()
+        page_name = ig_user_data.get('username', 'Instagram Account')
+
+        platform_to_save = 'instagram'
+
+    else: # Default to Facebook flow
+        # Get the list of Facebook pages the user manages
+        pages_url = f"https://graph.facebook.com/me/accounts?access_token={user_access_token}"
+        response = requests.get(pages_url)
+        pages_data = response.json()
+
+        if not pages_data or 'data' not in pages_data or len(pages_data['data']) == 0:
+            print("Error: no managed Facebook pages found:", pages_data)
+            return redirect('home')
+
+        page_info = pages_data['data'][0]
+        page_id = page_info['id']
+        page_name = page_info['name']
+        platform_to_save = 'facebook'
+
+    # Save the connection details using the new, generic model
+    SocialConnection.objects.update_or_create(
+        user=request.user,
+        platform=platform_to_save, # <-- The platform is now dynamic
+        defaults={
+            'page_id': page_id,
+            'page_name': page_name,
+            'page_access_token': user_access_token
+        }
+    )
+
+    return redirect('home')
+
+
+
 
