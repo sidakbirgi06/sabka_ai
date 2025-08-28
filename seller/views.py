@@ -17,6 +17,7 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 from .models import FacebookPage
 from .business_tools import get_business_info
+from google.ai.generativelanguage import Part
 
 
 
@@ -562,6 +563,7 @@ model = genai.GenerativeModel(
 
 
 
+# BUSINESS ASSISTANT API
 @csrf_exempt
 @login_required
 def business_assistant_api(request):
@@ -575,15 +577,46 @@ def business_assistant_api(request):
             if not user_message:
                 return JsonResponse({'error': 'No message provided'}, status=400)
 
-            # Start a chat session with the model
-            chat = model.start_chat(enable_automatic_function_calling=True)
+            # This is our library of available tools
+            tool_library = {
+                "get_business_info": get_business_info
+            }
+
+            # Start a chat session WITHOUT automatic function calling
+            chat = model.start_chat()
             
-            # Send the user's message to the model
+            # Send the initial message
             response = chat.send_message(user_message)
             
-            # The model automatically handles calling the tool and generating a final response
-            bot_reply = response.text
+            # Check if the model wants to call a function
+            function_call = response.candidates[0].content.parts[0].function_call
+            
+            while function_call:
+                function_name = function_call.name
+                function_to_call = tool_library.get(function_name)
+                
+                if function_to_call:
+                    # --- THIS IS THE CRUCIAL PART ---
+                    # We manually call the function and pass in the logged-in user
+                    function_response = function_to_call(user=request.user)
+                    
+                    # Send the tool's output back to the model
+                    response = chat.send_message(
+                        Part(function_response={
+                            "name": function_name,
+                            "response": {
+                                # The tool returns a string, so we package it as "result"
+                                "result": function_response 
+                            },
+                        })
+                    )
+                    # Check if the model wants to call another function
+                    function_call = response.candidates[0].content.parts[0].function_call
+                else:
+                    # If the model tries to call a function we don't have, break the loop
+                    break
 
+            bot_reply = response.text
             return JsonResponse({'reply': bot_reply})
 
         except json.JSONDecodeError:
