@@ -21,11 +21,11 @@ from .business_tools import get_business_info
 
 
 # We have REMOVED the try/except block for debugging purposes
-genai.configure(api_key=os.environ.get("GOOGLE_API_KEY")) # Or the name you used
-model = genai.GenerativeModel(
-    model_name='gemini-1.5-flash',
-    tools=[get_business_info]
-)
+# genai.configure(api_key=os.environ.get("GOOGLE_API_KEY")) # Or the name you used
+# model = genai.GenerativeModel(
+#     model_name='gemini-1.5-flash',
+#     tools=[get_business_info]
+# )
 
 
 # === FOR HOME PAGE ===
@@ -554,7 +554,7 @@ def facebook_callback(request):
 # in seller/views.py
 
 # Configure the generative AI model
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
 model = genai.GenerativeModel(
     model_name='gemini-1.5-flash',
     tools=[get_business_info] #<-- Tell the model about our tool
