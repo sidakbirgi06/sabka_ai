@@ -552,14 +552,27 @@ def facebook_callback(request):
     # 6. Redirect to home (or success page)
     return redirect('home')
 
-# in seller/views.py
 
 # Configure the generative AI model
-genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
-model = genai.GenerativeModel(
-    model_name='gemini-1.5-flash',
-    tools=[get_business_info] #<-- Tell the model about our tool
-)
+try:
+    genai.configure(api_key=os.environ.get("GOOGLE_API_KEY")) # Or whatever name you are using
+
+    # NEW: We are adding a system instruction to guide the AI
+    system_instruction = (
+        "You are a helpful and expert business assistant for a user who is already logged into the platform. "
+        "When the user asks a question, your primary goal is to use your available tools to find the answer. "
+        "You do not need to ask for the user's identity, ID, or name; the 'user' parameter for your tools will be provided automatically by the system based on their logged-in session. "
+        "Formulate your final answers based on the output of the tools."
+    )
+
+    model = genai.GenerativeModel(
+        model_name='gemini-1.5-flash',
+        tools=[get_business_info],
+        system_instruction=system_instruction  # <-- We add the instruction here
+    )
+except Exception as e:
+    print(f"Error configuring Generative AI model: {e}")
+    model = None
 
 
 
