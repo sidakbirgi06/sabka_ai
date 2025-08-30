@@ -548,7 +548,7 @@ def instagram_connect(request):
 
 # in seller/views.py
 
-# This is the single, unified callback view for both platforms (CORRECTED VERSION)
+# This is the single, unified callback view for both platforms (FINAL CORRECTED VERSION)
 def oauth_callback(request):
     code = request.GET.get('code')
     state = request.GET.get('state') # Get the state to check the platform
@@ -556,7 +556,7 @@ def oauth_callback(request):
     if not code:
         return redirect('home')
 
-    # Exchange the code for a user access token (this is the same for both)
+    # Step 1: Exchange code for a user access token
     APP_ID = os.environ.get('FACEBOOK_APP_ID')
     APP_SECRET = os.environ.get('FACEBOOK_APP_SECRET')
     redirect_uri = request.build_absolute_uri(reverse('oauth_callback'))
@@ -570,54 +570,55 @@ def oauth_callback(request):
         print("Error getting user access token:", user_token_data)
         return redirect('home')
 
-    # Now we get the accounts/pages using the user token
+    # Step 2: Get the list of pages/accounts the user manages
     accounts_url = f"https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account,name,access_token&access_token={user_access_token}"
     response = requests.get(accounts_url)
     pages_data = response.json()
+    
+    page_id, page_name, page_access_token, platform_to_save = (None, None, None, None)
 
-    # Default values
-    page_id = None
-    page_name = None
-    page_access_token = None
-    platform_to_save = None
-
+    # Step 3: Find the correct page/account based on the flow (Facebook or Instagram)
     if state == 'instagram_flow':
-        # Find the first page with an associated Instagram account
+        platform_to_save = 'instagram'
         if 'data' in pages_data:
             for page in pages_data['data']:
                 if 'instagram_business_account' in page:
                     ig_account_info = page['instagram_business_account']
                     page_id = ig_account_info['id']
-                    page_name = ig_account_info.get('username', 'Instagram Account') # IG provides username here
-                    page_access_token = page['access_token'] # Get the Page token for this IG account
-                    platform_to_save = 'instagram'
+                    page_name = ig_account_info.get('username', 'Instagram Account')
+                    page_access_token = page['access_token']
                     break
         if not page_id:
-            print("Error: No Instagram Business Account found.")
+            print("Error: No Instagram Business Account found linked to any Facebook Page.")
             return redirect('home')
     
     else: # Default to Facebook flow
+        platform_to_save = 'facebook'
         if not pages_data or 'data' not in pages_data or len(pages_data['data']) == 0:
             print("Error: no managed Facebook pages found:", pages_data)
             return redirect('home')
-
         page_info = pages_data['data'][0]
         page_id = page_info['id']
         page_name = page_info['name']
-        page_access_token = page_info['access_token'] # Get the Page token for this FB Page
-        platform_to_save = 'facebook'
+        page_access_token = page_info['access_token']
 
-    # Save the connection details using the new, generic model
+    # Step 4: Save the connection details to our database
     if page_id and platform_to_save:
         SocialConnection.objects.update_or_create(
             user=request.user,
             platform=platform_to_save,
-            defaults={
-                'page_id': page_id,
-                'page_name': page_name,
-                'page_access_token': page_access_token # <-- Now saving the correct Page Access Token
-            }
+            defaults={ 'page_id': page_id, 'page_name': page_name, 'page_access_token': page_access_token }
         )
+
+        # --- STEP 5: THIS IS THE NEW, CRUCIAL PART ---
+        # Subscribe this specific page/account to our app's webhook
+        subscribe_url = f"https://graph.facebook.com/v19.0/{page_id}/subscribed_apps"
+        params = {
+            "subscribed_fields": "messages",
+            "access_token": page_access_token
+        }
+        subscribe_response = requests.post(subscribe_url, params=params)
+        print(f"Subscribed {page_name} ({platform_to_save}) to webhooks: {subscribe_response.status_code}, {subscribe_response.text}")
 
     return redirect('home')
 
