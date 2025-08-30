@@ -546,7 +546,9 @@ def instagram_connect(request):
     return redirect(auth_url)
 
 
-# This is the single, unified callback view for both platforms
+# in seller/views.py
+
+# This is the single, unified callback view for both platforms (CORRECTED VERSION)
 def oauth_callback(request):
     code = request.GET.get('code')
     state = request.GET.get('state') # Get the state to check the platform
@@ -568,39 +570,33 @@ def oauth_callback(request):
         print("Error getting user access token:", user_token_data)
         return redirect('home')
 
-    # Determine which platform this callback is for
-    if state == 'instagram_flow':
-        # Get Instagram Business Accounts connected to the user's Facebook page
-        ig_accounts_url = f"https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account&access_token={user_access_token}"
-        response = requests.get(ig_accounts_url)
-        pages_data = response.json()
+    # Now we get the accounts/pages using the user token
+    accounts_url = f"https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account,name,access_token&access_token={user_access_token}"
+    response = requests.get(accounts_url)
+    pages_data = response.json()
 
+    # Default values
+    page_id = None
+    page_name = None
+    page_access_token = None
+    platform_to_save = None
+
+    if state == 'instagram_flow':
         # Find the first page with an associated Instagram account
-        ig_account_info = None
         if 'data' in pages_data:
             for page in pages_data['data']:
                 if 'instagram_business_account' in page:
                     ig_account_info = page['instagram_business_account']
+                    page_id = ig_account_info['id']
+                    page_name = ig_account_info.get('username', 'Instagram Account') # IG provides username here
+                    page_access_token = page['access_token'] # Get the Page token for this IG account
+                    platform_to_save = 'instagram'
                     break
-        
-        if not ig_account_info:
+        if not page_id:
             print("Error: No Instagram Business Account found.")
             return redirect('home')
-        
-        page_id = ig_account_info['id']
-        ig_user_url = f"https://graph.facebook.com/v19.0/{page_id}?fields=username&access_token={user_access_token}"
-        response = requests.get(ig_user_url)
-        ig_user_data = response.json()
-        page_name = ig_user_data.get('username', 'Instagram Account')
-
-        platform_to_save = 'instagram'
-
+    
     else: # Default to Facebook flow
-        # Get the list of Facebook pages the user manages
-        pages_url = f"https://graph.facebook.com/me/accounts?access_token={user_access_token}"
-        response = requests.get(pages_url)
-        pages_data = response.json()
-
         if not pages_data or 'data' not in pages_data or len(pages_data['data']) == 0:
             print("Error: no managed Facebook pages found:", pages_data)
             return redirect('home')
@@ -608,18 +604,20 @@ def oauth_callback(request):
         page_info = pages_data['data'][0]
         page_id = page_info['id']
         page_name = page_info['name']
+        page_access_token = page_info['access_token'] # Get the Page token for this FB Page
         platform_to_save = 'facebook'
 
     # Save the connection details using the new, generic model
-    SocialConnection.objects.update_or_create(
-        user=request.user,
-        platform=platform_to_save, # <-- The platform is now dynamic
-        defaults={
-            'page_id': page_id,
-            'page_name': page_name,
-            'page_access_token': user_access_token
-        }
-    )
+    if page_id and platform_to_save:
+        SocialConnection.objects.update_or_create(
+            user=request.user,
+            platform=platform_to_save,
+            defaults={
+                'page_id': page_id,
+                'page_name': page_name,
+                'page_access_token': page_access_token # <-- Now saving the correct Page Access Token
+            }
+        )
 
     return redirect('home')
 
