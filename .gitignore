@@ -11,5 +11,3 @@ db.sqlite3
 .env
 
 
-# Ignore the secret environment file
-.env

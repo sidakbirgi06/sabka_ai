@@ -1,12 +1,19 @@
-# In seller/context_processors.py
+# in seller/context_processors.py
 
-from .models import FacebookPage
+from .models import SocialConnection
 
-def connection_status(request):
-    # Default to False if the user is not even logged in
-    if not request.user.is_authenticated:
-        return {'is_connected': False}
+def social_connections_context(request):
+    # This function will run for every request.
+    # We only want to run the database query if the user is logged in.
+    if request.user.is_authenticated:
+        facebook_connection = SocialConnection.objects.filter(user=request.user, platform='facebook').first()
+        instagram_connection = SocialConnection.objects.filter(user=request.user, platform='instagram').first()
+        
+        # This dictionary gets added to the context of every template.
+        return {
+            'facebook_connection': facebook_connection,
+            'instagram_connection': instagram_connection
+        }
     
-    # If they are logged in, check the database for a connection
-    is_connected = FacebookPage.objects.filter(user=request.user).exists()
-    return {'is_connected': is_connected}
+    # If the user is not logged in, return an empty dictionary.
+    return {}

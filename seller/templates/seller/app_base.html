@@ -13,13 +13,27 @@
                 <li><a href="{% url 'chat_view' %}">Test Chatbot</a></li>
                 <li><a href="{% url 'business_info_step1' %}">Business Profile</a></li>
                 <li><a href="{% url 'chatbot_setup_step1' %}">Chatbot Setup</a></li>
-                {% if not is_connected %}
-                    <li><a href="{% url 'facebook_connect' %}" class="nav-button-connect">Connect Facebook</a></li>
-                {% else %}
-                    <li><span class="nav-connected">✓ Facebook Connected</span></li>
-                {% endif %}
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="socialDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Social Connections
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="socialDropdown">
+                        {% if facebook_connection %}
+                            <li><span class="dropdown-item-text">✓ Facebook: {{ facebook_connection.page_name }}</span></li>
+                        {% else %}
+                            <li><a class="dropdown-item" href="{% url 'facebook_connect' %}">Connect Facebook</a></li>
+                        {% endif %}
+
+                        {% if instagram_connection %}
+                            <li><span class="dropdown-item-text">✓ Instagram: {{ instagram_connection.page_name }}</span></li>
+                        {% else %}
+                            <li><a class="dropdown-item" href="{% url 'instagram_connect' %}">Connect Instagram</a></li>
+                        {% endif %}
+                    </ul>
+                </li>
+                
                 <li><a href="{% url 'business_assistant_page' %}">Business Assistant</a></li>
-                 
             </ul>
         </nav>
         <div class="user-info">
