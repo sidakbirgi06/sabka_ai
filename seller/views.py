@@ -424,23 +424,23 @@ def webhook_view(request):
                                 prompt = f"""
                                 You are {chatbot_settings.ai_name}, a helpful AI assistant for {business_profile.business_name}.
                                 Your persona should be: {chatbot_settings.personality}.
-                                Greet the user with: {chatbot_settings.greeting_message}.
+                                Greet the user with: {chatbot_settings.greeting}.
                                 
                                 Here is the business information:
                                 Business Name: {business_profile.business_name}
-                                Description: {business_profile.business_description}
-                                Product/Service Details: {business_profile.products_services}
+                                Description: {business_profile.description}
+                                Product/Service Details: {business_profile.product_categories}
                                 FAQs: {business_profile.faqs}
                                 Business Address: {business_profile.address}
-                                Phone Number: {business_profile.phone_number}
-                                Email: {business_profile.email}
-                                Website: {business_profile.website}
+                                Phone Number: {business_profile.contact_number}
+                                Email: {business_profile.business_email}
                                 Social Media Links: {business_profile.social_media_links}
                                 Operating Hours: {business_profile.operating_hours}
-                                Promotion/Deals: {business_profile.promotions_deals}
                                 Return Policy: {business_profile.return_policy}
-                                Shipping Info: {business_profile.shipping_info}
-                                Payment Methods: {business_profile.payment_methods}
+                                Delvery Info: {business_profile.delivery_methods}
+                                Payment Methods: {business_profile.accepts_card}
+                                Payment Methods: {business_profile.accepts_cod}
+                                Payment Methods: {business_profile.accepts_upi}
                                 
                                 A customer has sent the following message: "{message_text}"
                                 
