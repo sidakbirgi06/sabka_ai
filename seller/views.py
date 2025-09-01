@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, logout
 from .forms import BusinessProfileStep1Form, BusinessProfileStep2Form, BusinessProfileStep3Form, BusinessProfileStep4Form, BusinessProfileStep5Form, ChatbotSettingsStep1Form, ChatbotSettingsStep2Form, ChatbotSettingsStep3Form
-from .models import BusinessProfile, ChatbotSettings
+from .models import BusinessProfile, ChatbotSettings, Conversation, Message
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 import os
@@ -362,78 +362,114 @@ def send_facebook_message(recipient_id, message_text, page_access_token):
     print(f"Facebook API Response: {response.status_code}, {response.text}")
 
 
-# ... your other views like home(), facebook_connect(), etc. ...
 
 # WEBHOOK FUNCTION
-
-# in seller/views.py
-
 @csrf_exempt
 def webhook_view(request):
-    if request.method == 'GET':
-        # This is the webhook verification, it's the same for both platforms
-        verify_token = os.environ.get('WEBHOOK_VERIFY_TOKEN')
-        mode = request.GET.get('hub.mode')
-        token = request.GET.get('hub.verify_token')
-        challenge = request.GET.get('hub.challenge')
-        if mode == 'subscribe' and token == verify_token:
-            return HttpResponse(challenge, status=200)
-        else:
-            return HttpResponse('Error, invalid verification token', status=403)
-
     if request.method == 'POST':
         data = json.loads(request.body)
-        
-        # Determine if the message is from Instagram or Facebook
-        platform = data.get("object") # This will be 'instagram' or 'page'
+        if data.get('object') == 'page' or data.get('object') == 'instagram':
+            for entry in data.get('entry', []):
+                # Determine platform and get messaging events
+                if 'messaging' in entry: # Facebook
+                    messaging_events = entry.get('messaging', [])
+                    platform = 'facebook'
+                elif 'standby' in entry: # Instagram (sometimes uses standby)
+                    messaging_events = entry.get('standby', [])
+                    platform = 'instagram'
+                else:
+                    continue
 
-        for entry in data.get("entry", []):
-            for messaging_event in entry.get("messaging", []):
-                if messaging_event.get("message"):
-                    sender_id = messaging_event["sender"]["id"]
-                    recipient_id = messaging_event["recipient"]["id"]
-                    message_text = messaging_event["message"]["text"]
+                for event in messaging_events:
+                    if event.get('message'):
+                        sender_id = event['sender']['id']
+                        recipient_id = event['recipient']['id']
+                        message_text = event['message'].get('text')
 
-                    try:
-                        # Find the correct SocialConnection based on page_id AND platform
-                        platform_name = 'instagram' if platform == 'instagram' else 'facebook'
-                        connection = SocialConnection.objects.get(page_id=recipient_id, platform=platform_name)
-                        
-                        profile = connection.user.businessprofile
-                        settings = profile.chatbotsettings
-                        page_access_token = connection.page_access_token
+                        if message_text:
+                            try:
 
-                        # The AI Brain and System Prompt are the same for both
-                        system_prompt = f"""
-                        You are an expert AI assistant for the business named '{profile.business_name}'.
-                        Your assigned name is '{settings.ai_name}'. Your personality must be: '{settings.personality}'.
-                        # ... (rest of your long prompt) ...
-                        ### FAQs ###
-                        {profile.faqs}
-                        """
+                                # 1. Find the SocialConnection for this page/profile
+                                if platform == 'facebook':
+                                    social_connection = SocialConnection.objects.get(page_id=recipient_id, platform='facebook')
+                                elif platform == 'instagram':
+                                    social_connection = SocialConnection.objects.get(page_id=recipient_id, platform='instagram')
+                                else:
+                                    continue # Skip if platform is unknown
 
-                        load_dotenv()
-                        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-                        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                                user = social_connection.user
+                                business_profile = BusinessProfile.objects.get(user=user)
+                                chatbot_settings = ChatbotSettings.objects.get(user=user)
+                                page_access_token = social_connection.page_access_token
 
-                        chat_session = model.start_chat(history=[])
-                        response = chat_session.send_message(system_prompt + "\n\nCustomer message: " + message_text)
-                        ai_reply = response.text
+                                # 2. Find or Create the Conversation record
+                                # This is the "filing" step. Get the file for this customer, or create a new one.
+                                conversation, created = Conversation.objects.get_or_create(
+                                    social_connection=social_connection,
+                                    customer_id=sender_id
+                                )
+                                # Optional: We could add logic here later to fetch the customer's name
 
-                        # Send the reply back to the correct platform
-                        # For now, the sending logic is the same, so we can reuse the function.
-                        # In the future, we might need a separate send_instagram_message function.
-                        send_facebook_message(sender_id, ai_reply, page_access_token)
+                                # 3. Save the customer's incoming message
+                                Message.objects.create(
+                                    conversation=conversation,
+                                    sender_type='customer',
+                                    content=message_text
+                                )
 
-                    except SocialConnection.DoesNotExist:
-                        print(f"Received message for an unknown Page/Account ID: {recipient_id}")
-                        pass 
-                    except Exception as e:
-                        print(f"An error occurred in webhook: {e}")
+
+                                # (Existing AI Logic)
+                                prompt = f"""
+                                You are {chatbot_settings.chatbot_name}, a helpful AI assistant for {business_profile.business_name}.
+                                Your persona should be: {chatbot_settings.chatbot_persona}.
+                                Greet the user with: {chatbot_settings.greeting_message}.
+                                
+                                Here is the business information:
+                                Business Name: {business_profile.business_name}
+                                Description: {business_profile.business_description}
+                                Product/Service Details: {business_profile.products_services}
+                                FAQs: {business_profile.faqs}
+                                Business Address: {business_profile.address}
+                                Phone Number: {business_profile.phone_number}
+                                Email: {business_profile.email}
+                                Website: {business_profile.website}
+                                Social Media Links: {business_profile.social_media_links}
+                                Operating Hours: {business_profile.operating_hours}
+                                Promotion/Deals: {business_profile.promotions_deals}
+                                Return Policy: {business_profile.return_policy}
+                                Shipping Info: {business_profile.shipping_info}
+                                Payment Methods: {business_profile.payment_methods}
+                                
+                                A customer has sent the following message: "{message_text}"
+                                
+                                Please provide a helpful and in-character response.
+                                """
+
+                                ai_response = get_gemini_response(prompt)
+
+
+                                # 4. Save the AI's outgoing reply
+                                Message.objects.create(
+                                    conversation=conversation,
+                                    sender_type='ai',
+                                    content=ai_response
+                                )
+                                
+
+                                # (Existing Sending Logic)
+                                if platform == 'facebook':
+                                    send_facebook_message(sender_id, ai_response, page_access_token)
+                                elif platform == 'instagram':
+                                    # Assuming you have a similar function for Instagram or it uses the same one
+                                    send_facebook_message(sender_id, ai_response, page_access_token)
+
+                            except SocialConnection.DoesNotExist:
+                                print(f"Warning: Received message for untracked page/profile ID: {recipient_id}")
+                            except Exception as e:
+                                print(f"An error occurred: {e}")
 
         return HttpResponse(status=200)
-
-    return HttpResponse("Unsupported method", status=405)
+    return HttpResponse(status=403)
 
 
 @login_required
