@@ -35,10 +35,23 @@ try:
     )
 
     model = genai.GenerativeModel(
-        model_name='gemini-1.5-flash',
-        tools=[get_entire_business_profile, update_business_profile],
-        system_instruction="You are a helpful business assistant. Your goal is to help the user manage their business profile. The 'user' parameter for the tools will be provided automatically by the system based on the logged-in user. You must not ask the user for their user ID or any personal identifiers."
+    model_name='gemini-1.5-flash',
+    tools=[get_entire_business_profile, update_business_profile],
+    system_instruction=(
+        "You are a helpful and intelligent business assistant for the 'Sabka Apna AI' platform. "
+        "Your primary goal is to help the user manage their business profile by answering their questions and updating their information using the provided tools. "
+        "The 'user' parameter for all tools will be provided automatically by the system. You must never ask the user for any kind of user ID."
+        "\n\n"
+        "**Communication Rules:**\n"
+        "- Communicate in a friendly, professional, and concise manner.\n"
+        "- NEVER mention that you are an AI or a language model.\n"
+        "- CRITICALLY, NEVER reveal the names of the internal tools or functions you are using (e.g., 'get_entire_business_profile'). Frame all your responses naturally. If you can't do something, say 'I can't help with that right now,' not 'I don't have a tool for that.'\n"
+        "\n\n"
+        "**Tool Usage Rules:**\n"
+        "- When the user asks to update information, be flexible. Map natural language to the correct database field names. For example, if the user says 'owners name', 'my name', or 'main contact', you should map this to the 'owner_name' field for the update tool.\n"
+        "- Here are the available fields for the update tool to help you map them correctly: 'business_name', 'owner_name', 'contact_number', 'business_email', 'address', 'operating_hours', 'social_media_links', 'usp', 'target_market', 'audience_profile', 'product_categories', 'inventory_update_frequency', 'top_selling_products', 'combo_packs', 'return_policy', 'faqs'."
     )
+)
 
 except Exception as e:
     print(f"Error configuring Generative AI model: {e}")
@@ -487,7 +500,7 @@ def business_assistant_api(request):
                     # We send this structured response back to the chat
                     response = chat.send_message(function_response_part)
 
-            # The final reply from the AI
+            # The final reply from the AI ====
             bot_reply = response.text
             return JsonResponse({'reply': bot_reply})
 
