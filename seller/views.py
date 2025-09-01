@@ -16,7 +16,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.contrib.auth.models import User
 from .models import SocialConnection
-from .business_tools import get_business_info
+from .business_tools import get_entire_business_profile, update_business_profile
 from google.ai.generativelanguage import Part
 
 
@@ -426,14 +426,19 @@ try:
 
     model = genai.GenerativeModel(
         model_name='gemini-1.5-flash',
-        tools=[get_business_info],
-        system_instruction=system_instruction  # <-- We add the instruction here
+        tools=[get_entire_business_profile, update_business_profile] 
     )
+
 except Exception as e:
     print(f"Error configuring Generative AI model: {e}")
     model = None
 
 
+
+tool_functions = {
+    "get_entire_business_profile": get_entire_business_profile,
+    "update_business_profile": update_business_profile,
+}
 
 # BUSINESS ASSISTANT API
 @csrf_exempt
@@ -449,53 +454,47 @@ def business_assistant_api(request):
             if not user_message:
                 return JsonResponse({'error': 'No message provided'}, status=400)
 
-            # This is our library of available tools
-            tool_library = {
-                "get_business_info": get_business_info
-            }
-
-            # Start a chat session WITHOUT automatic function calling
+            # Start a chat session
             chat = model.start_chat()
             
-            # Send the initial message
+            # Send the first message to the AI
             response = chat.send_message(user_message)
             
-            # Check if the model wants to call a function
+            # Check if the AI wants to use a tool
             function_call = response.candidates[0].content.parts[0].function_call
             
-            while function_call:
-                function_name = function_call.name
-                function_to_call = tool_library.get(function_name)
-                
-                if function_to_call:
-                    # --- THIS IS THE CRUCIAL PART ---
-                    # We manually call the function and pass in the logged-in user
-                    function_response = function_to_call(user=request.user)
-                    
-                    # Send the tool's output back to the model
-                    response = chat.send_message(
-                        Part(function_response={
-                            "name": function_name,
-                            "response": {
-                                # The tool returns a string, so we package it as "result"
-                                "result": function_response 
-                            },
-                        })
-                    )
-                    # Check if the model wants to call another function
-                    function_call = response.candidates[0].content.parts[0].function_call
-                else:
-                    # If the model tries to call a function we don't have, break the loop
-                    break
+            if function_call:
+                # The AI wants to use a tool. Let's process it.
+                tool_name = function_call.name
+                tool_args = {key: value for key, value in function_call.args.items()}
 
+                if tool_name in tool_functions:
+                    # Get the actual Python function from our dictionary
+                    selected_tool = tool_functions[tool_name]
+                    
+                    # *** THIS IS THE CRITICAL STEP ***
+                    # We add the logged-in user to the arguments for the tool
+                    tool_args['user'] = request.user
+                    
+                    # Call the tool with the arguments
+                    tool_output = selected_tool(**tool_args)
+                    
+                    # Send the tool's output back to the AI
+                    response = chat.send_message(
+                        f"Tool Output: {tool_output}",
+                        tool_config={
+                            "tool_call": function_call,
+                            "tool_output": tool_output
+                        }
+                    )
+            
+            # The final reply from the AI (either after using a tool or its initial response)
             bot_reply = response.text
             return JsonResponse({'reply': bot_reply})
 
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
         except Exception as e:
             print(f"Error in business_assistant_api: {e}")
-            return JsonResponse({'error': 'An internal error occurred.'}, status=500)
+            return JsonResponse({'error': f'An internal error occurred: {e}'}, status=500)
     
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
