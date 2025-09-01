@@ -54,26 +54,37 @@ def update_business_profile(user, **updates) -> str:
     Provide field names as arguments with their new values.
     Example: update_business_profile(user, business_name="New Name", operating_hours="9-5")
     """
+    print(f"[DEBUG] update_business_profile called with updates: {updates}")
+
     if not updates:
         return "No update information was provided."
 
     try:
         profile = BusinessProfile.objects.get(user=user)
+        print(f"[DEBUG] Found profile for user: {user.username}")
         
         updated_fields = []
         for field, value in updates.items():
             if hasattr(profile, field):
+                print(f"[DEBUG] About to update field '{field}' to '{value}'")
                 setattr(profile, field, value)
                 updated_fields.append(field)
             else:
+                print(f"[DEBUG] Error: Field '{field}' does not exist.")
                 return f"Error: The field '{field}' does not exist in the Business Profile."
 
         if not updated_fields:
             return "None of the provided fields matched the Business Profile."
 
-        profile.save()
+        # MODIFIED THIS LINE TO BE MORE EXPLICIT
+        profile.save(update_fields=updated_fields)
+        print(f"[DEBUG] profile.save() called for fields: {updated_fields}")
         
         return f"Successfully updated the following fields: {', '.join(updated_fields)}."
 
     except BusinessProfile.DoesNotExist:
+        print(f"[DEBUG] Error: Business profile not found for user: {user.username}")
         return "The user has not created a business profile yet. Cannot update."
+    except Exception as e:
+        print(f"[DEBUG] An unexpected error occurred: {e}")
+        return f"An unexpected error occurred while trying to update: {e}"
