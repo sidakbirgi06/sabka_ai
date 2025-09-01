@@ -22,9 +22,32 @@ from google.ai.generativelanguage import Part
 
 
 
+# Configure the generative AI model
+try:
+    genai.configure(api_key=os.environ.get("GOOGLE_API_KEY")) # Or whatever name you are using
+
+    # NEW: We are adding a system instruction to guide the AI
+    system_instruction = (
+        "You are a helpful and expert business assistant for a user who is already logged into the platform. "
+        "When the user asks a question, your primary goal is to use your available tools to find the answer. "
+        "You do not need to ask for the user's identity, ID, or name; the 'user' parameter for your tools will be provided automatically by the system based on their logged-in session. "
+        "Formulate your final answers based on the output of the tools."
+    )
+
+    model = genai.GenerativeModel(
+        model_name='gemini-1.5-flash',
+        tools=[get_entire_business_profile, update_business_profile],
+        system_instruction="You are a helpful business assistant. Your goal is to help the user manage their business profile. The 'user' parameter for the tools will be provided automatically by the system based on the logged-in user. You must not ask the user for their user ID or any personal identifiers."
+    )
+
+except Exception as e:
+    print(f"Error configuring Generative AI model: {e}")
+    model = None
 
 
-# === FOR HOME PAGE ===
+
+
+# FOR HOME PAGE 
 def home(request):
     return render(request, 'seller/home.html')
 
@@ -407,31 +430,6 @@ def debug_view(request):
         'profiles': all_profiles
     }
     return render(request, 'seller/debug_data.html', context)
-
-
-
-
-
-# Configure the generative AI model
-try:
-    genai.configure(api_key=os.environ.get("GOOGLE_API_KEY")) # Or whatever name you are using
-
-    # NEW: We are adding a system instruction to guide the AI
-    system_instruction = (
-        "You are a helpful and expert business assistant for a user who is already logged into the platform. "
-        "When the user asks a question, your primary goal is to use your available tools to find the answer. "
-        "You do not need to ask for the user's identity, ID, or name; the 'user' parameter for your tools will be provided automatically by the system based on their logged-in session. "
-        "Formulate your final answers based on the output of the tools."
-    )
-
-    model = genai.GenerativeModel(
-        model_name='gemini-1.5-flash',
-        tools=[get_entire_business_profile, update_business_profile] 
-    )
-
-except Exception as e:
-    print(f"Error configuring Generative AI model: {e}")
-    model = None
 
 
 
