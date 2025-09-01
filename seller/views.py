@@ -422,8 +422,8 @@ def webhook_view(request):
 
                                 # (Existing AI Logic)
                                 prompt = f"""
-                                You are {chatbot_settings.chatbot_name}, a helpful AI assistant for {business_profile.business_name}.
-                                Your persona should be: {chatbot_settings.chatbot_persona}.
+                                You are {chatbot_settings.ai_name}, a helpful AI assistant for {business_profile.business_name}.
+                                Your persona should be: {chatbot_settings.personality}.
                                 Greet the user with: {chatbot_settings.greeting_message}.
                                 
                                 Here is the business information:
