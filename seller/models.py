@@ -132,4 +132,55 @@ class SocialConnection(models.Model):
 
     def __str__(self):
         return f"{self.page_name} ({self.get_platform_display()}) for {self.user.username}"
+
+
+
+
+
+class Conversation(models.Model):
+    # Link to the specific social media connection (and thus to the user)
+    social_connection = models.ForeignKey(SocialConnection, on_delete=models.CASCADE, related_name='conversations')
+    
+    # The unique ID for the customer on the platform (e.g., Page-Scoped ID on Facebook)
+    customer_id = models.CharField(max_length=100, db_index=True)
+    customer_name = models.CharField(max_length=150, blank=True, null=True)
+    
+    STATUS_CHOICES = [
+        ('ongoing', 'Ongoing'),
+        ('resolved', 'Resolved'),
+        ('needs_attention', 'Needs Attention'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ongoing')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True) # This will update every time a new message comes in
+
+    class Meta:
+        # Ensures a customer can't have multiple open conversations on the same page
+        unique_together = ('social_connection', 'customer_id')
+
+    def __str__(self):
+        return f"Conversation with {self.customer_name or self.customer_id} on {self.social_connection.platform}"
+
+
+
+
+class Message(models.Model):
+    # Link to the parent conversation
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
+    
+    SENDER_CHOICES = [
+        ('customer', 'Customer'),
+        ('ai', 'AI'),
+        ('seller', 'Seller'), # We can add this for the "human takeover" feature later
+    ]
+    sender_type = models.CharField(max_length=10, choices=SENDER_CHOICES)
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['timestamp'] # Always order messages by when they were created
+
+    def __str__(self):
+        return f"Message from {self.get_sender_type_display()} at {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
     

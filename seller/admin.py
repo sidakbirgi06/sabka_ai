@@ -1,9 +1,11 @@
 from django.contrib import admin
-from .models import BusinessProfile, ChatbotSettings, SocialConnection # Import our models
+from .models import BusinessProfile, ChatbotSettings, SocialConnection, Conversation, Message
 
 # Register your models here.
 # This tells Django to show these models in the admin site.
 admin.site.register(BusinessProfile)
 admin.site.register(ChatbotSettings)
 admin.site.register(SocialConnection)
+admin.site.register(Conversation)
+admin.site.register(Message)
 
