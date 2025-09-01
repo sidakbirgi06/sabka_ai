@@ -433,6 +433,13 @@ def debug_view(request):
 
 
 
+# BUSINESS ASSISTANT PAGE
+def business_assistant_page(request):
+    # This comment is here to ensure the file is updated
+    return render(request, 'seller/business_assistant_page.html')
+
+
+
 tool_functions = {
     "get_entire_business_profile": get_entire_business_profile,
     "update_business_profile": update_business_profile,
@@ -467,26 +474,20 @@ def business_assistant_api(request):
                 tool_args = {key: value for key, value in function_call.args.items()}
 
                 if tool_name in tool_functions:
-                    # Get the actual Python function from our dictionary
                     selected_tool = tool_functions[tool_name]
-                    
-                    # *** THIS IS THE CRITICAL STEP ***
-                    # We add the logged-in user to the arguments for the tool
                     tool_args['user'] = request.user
-                    
-                    # Call the tool with the arguments
                     tool_output = selected_tool(**tool_args)
                     
-                    # Send the tool's output back to the AI
-                    response = chat.send_message(
-                        f"Tool Output: {tool_output}",
-                        tool_config={
-                            "tool_call": function_call,
-                            "tool_output": tool_output
+                    function_response_part = Part(
+                        function_response={
+                            "name": tool_name,
+                            "response": {"content": tool_output},
                         }
                     )
-            
-            # The final reply from the AI (either after using a tool or its initial response)
+                    # We send this structured response back to the chat
+                    response = chat.send_message(function_response_part)
+
+            # The final reply from the AI
             bot_reply = response.text
             return JsonResponse({'reply': bot_reply})
 
@@ -497,15 +498,7 @@ def business_assistant_api(request):
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 
-def business_assistant_page(request):
-    # This comment is here to ensure the file is updated
-    return render(request, 'seller/business_assistant_page.html')
 
-
-
-
-
-# Add these three functions to views.py
 
 @login_required
 def facebook_connect(request):
