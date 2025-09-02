@@ -447,7 +447,7 @@ def webhook_view(request):
                                 Please provide a helpful and in-character response.
                                 """
 
-                                ai_response = get_gemini_response(prompt)
+                                ai_response = get_ai_response(prompt)
 
 
                                 # 4. Save the AI's outgoing reply
