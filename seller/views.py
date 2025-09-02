@@ -18,7 +18,7 @@ from django.contrib.auth.models import User
 from .models import SocialConnection
 from .business_tools import get_entire_business_profile, update_business_profile
 from google.ai.generativelanguage import Part
-from .ai_utils import get_gemini_response
+from .ai_utils import get_ai_response
 
 
 
