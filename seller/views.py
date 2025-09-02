@@ -410,7 +410,10 @@ def webhook_view(request):
                                     social_connection=social_connection,
                                     customer_id=sender_id
                                 )
-                                # Optional: We could add logic here later to fetch the customer's name
+                                if created:
+                                    customer_name = get_facebook_user_profile(sender_id, page_access_token)
+                                    conversation.customer_name = customer_name
+                                    conversation.save()
 
                                 # 3. Save the customer's incoming message
                                 Message.objects.create(
@@ -662,6 +665,41 @@ def oauth_callback(request):
         print(f"Subscribed {page_name} ({platform_to_save}) to webhooks: {subscribe_response.status_code}, {subscribe_response.text}")
 
     return redirect('home')
+
+
+
+#TO GET PROFILE OF USER
+def get_facebook_user_profile(user_id, page_access_token):
+    """
+    Fetches a user's first and last name from the Meta Graph API.
+    """
+    # The URL for the Graph API request
+    url = f"https://graph.facebook.com/v19.0/{user_id}" # Using a recent, stable API version
+    
+    # The parameters for the request
+    params = {
+        'fields': 'first_name,last_name',
+        'access_token': page_access_token
+    }
+    
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status() # Raise an exception for bad status codes (4xx or 5xx)
+        
+        data = response.json()
+        first_name = data.get('first_name', '')
+        last_name = data.get('last_name', '')
+        
+        # Combine the names into a full name
+        full_name = f"{first_name} {last_name}".strip()
+        
+        # Return the full name, or the user_id as a fallback if the name is blank
+        return full_name if full_name else user_id
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching Facebook user profile for ID {user_id}: {e}")
+        # If the API call fails, just return the user_id as a fallback
+        return user_id
 
 
 
