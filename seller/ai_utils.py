@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # The specific Llama 3 model we want to use from Hugging Face
-API_URL = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct"
+API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
 HF_API_TOKEN = os.getenv('HF_API_TOKEN')
 
 def get_ai_response(prompt):
