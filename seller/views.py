@@ -706,21 +706,41 @@ def get_facebook_user_profile(user_id, page_access_token):
 
 
 # INBOX PAGE
+# Replace your existing inbox_list_view with this temporary debugging version
+
 @login_required
 def inbox_list_view(request):
-    """
-    Fetches and displays the list of all conversations for the logged-in user.
-    """
-    # Find all conversations linked to the social connections of the currently logged-in user
+    # --- START OF DEBUGGING CODE ---
+    print("--- Starting inbox_list_view debug ---")
+    
+    # Clue #1: Who does the server think is logged in?
+    logged_in_user = request.user
+    print(f"LOGGED-IN USER: Username='{logged_in_user.username}', ID={logged_in_user.id}")
+
+    # Clue #2: Can the server find ANY conversations in the database at all?
+    all_conversations = Conversation.objects.all()
+    print(f"DATABASE CHECK: Found {all_conversations.count()} total conversation(s) in the database.")
+
+    # Clue #3: For each conversation, who is the owner?
+    for convo in all_conversations:
+        try:
+            owner = convo.social_connection.user
+            print(f"  - Inspecting Conversation ID {convo.id}: It is owned by User '{owner.username}' (ID: {owner.id})")
+        except Exception as e:
+            print(f"  - Inspecting Conversation ID {convo.id}: Could not determine owner. Error: {e}")
+    
+    print("--- End of debug ---")
+    # --- END OF DEBUGGING CODE ---
+
+    # This is our original query. We are leaving it untouched.
     conversations = Conversation.objects.filter(
         social_connection__user=request.user
-    ).order_by('-updated_at') # Order by most recently updated
+    ).order_by('-updated_at')
 
     context = {
         'conversations': conversations
     }
     return render(request, 'seller/inbox.html', context)
-
 
 
 # TO VIEW SPECIFIC MSG FROM INBOX PAGE
