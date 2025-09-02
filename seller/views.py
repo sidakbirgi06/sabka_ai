@@ -19,6 +19,8 @@ from .models import SocialConnection
 from .business_tools import get_entire_business_profile, update_business_profile
 from google.ai.generativelanguage import Part
 from .ai_utils import get_ai_response
+from django.shortcuts import get_object_or_404
+
 
 
 
@@ -700,6 +702,48 @@ def get_facebook_user_profile(user_id, page_access_token):
         print(f"Error fetching Facebook user profile for ID {user_id}: {e}")
         # If the API call fails, just return the user_id as a fallback
         return user_id
+    
+
+
+# INBOX PAGE
+@login_required
+def inbox_list_view(request):
+    """
+    Fetches and displays the list of all conversations for the logged-in user.
+    """
+    # Find all conversations linked to the social connections of the currently logged-in user
+    conversations = Conversation.objects.filter(
+        social_connection__user=request.user
+    ).order_by('-updated_at') # Order by most recently updated
+
+    context = {
+        'conversations': conversations
+    }
+    return render(request, 'seller/inbox.html', context)
+
+
+
+# TO VIEW SPECIFIC MSG FROM INBOX PAGE
+@login_required
+def inbox_detail_view(request, conversation_id):
+    """
+    Fetches and displays the messages for a single, specific conversation.
+    """
+    # Get the specific conversation, but also ensure it belongs to the logged-in user for security
+    conversation = get_object_or_404(
+        Conversation, 
+        id=conversation_id, 
+        social_connection__user=request.user
+    )
+    
+    # Get all messages related to this conversation (they are already ordered by timestamp)
+    messages = conversation.messages.all()
+
+    context = {
+        'conversation': conversation,
+        'messages': messages,
+    }
+    return render(request, 'seller/conversation_detail.html', context)
 
 
 

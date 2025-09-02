@@ -1,0 +1,71 @@
+{% extends 'seller/base.html' %}
+
+{% block title %}Chat with {{ conversation.customer_name }}{% endblock %}
+
+{% block content %}
+<style>
+    .chat-container {
+        max-width: 800px;
+        margin: auto;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        height: 60vh;
+        overflow-y: scroll;
+        display: flex;
+        flex-direction: column;
+    }
+    .message-bubble {
+        max-width: 70%;
+        padding: 10px 15px;
+        border-radius: 18px;
+        margin-bottom: 10px;
+        word-wrap: break-word;
+    }
+    .customer-message {
+        background-color: #007bff;
+        color: white;
+        align-self: flex-end;
+        border-bottom-right-radius: 4px;
+    }
+    .ai-message {
+        background-color: #e9e9eb;
+        color: #333;
+        align-self: flex-start;
+        border-bottom-left-radius: 4px;
+    }
+    .message-time {
+        font-size: 0.75rem;
+        color: #888;
+        margin-top: 5px;
+    }
+</style>
+
+<div class="container mt-4">
+    <a href="{% url 'seller:inbox_list' %}" class="btn btn-outline-secondary mb-3">&larr; Back to Inbox</a>
+    <h1 class="mb-4">Chat with {{ conversation.customer_name }}</h1>
+
+    <div class="chat-container" id="chat-box">
+        {% for message in messages %}
+            {% if message.sender_type == 'customer' %}
+                <div class="message-bubble customer-message">
+                    {{ message.content }}
+                    <div class="message-time text-light text-end">{{ message.timestamp|date:"d M, P" }}</div>
+                </div>
+            {% else %}
+                <div class="message-bubble ai-message">
+                    {{ message.content }}
+                    <div class="message-time text-start">{{ message.timestamp|date:"d M, P" }}</div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    // Automatically scroll to the bottom of the chat box
+    const chatBox = document.getElementById('chat-box');
+    chatBox.scrollTop = chatBox.scrollHeight;
+</script>
+
+{% endblock %}
