@@ -713,6 +713,9 @@ def get_facebook_user_profile(user_id, page_access_token):
 
 @login_required
 def inbox_list_view(request):
+
+    raise ValueError("This is my intentional crash to test if the new code is being deployed.")
+
     # --- START OF DEBUGGING CODE ---
     logging.warning("--- Starting inbox_list_view debug ---")
 
