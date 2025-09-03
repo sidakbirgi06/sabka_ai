@@ -6,7 +6,6 @@ from .models import BusinessProfile, ChatbotSettings, Conversation, Message
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 import os
-import google.generativeai as genai
 from dotenv import load_dotenv
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -16,9 +15,8 @@ from django.conf import settings
 from django.urls import reverse
 from django.contrib.auth.models import User
 from .models import SocialConnection
-from .business_tools import get_entire_business_profile, update_business_profile
 from google.ai.generativelanguage import Part
-from .ai_utils import get_ai_response
+from .ai_utils import get_gemini_response, get_assistant_response
 from django.shortcuts import get_object_or_404
 
 import logging
@@ -455,7 +453,7 @@ def webhook_view(request):
                                 Please provide a helpful and in-character response.
                                 """
 
-                                ai_response = get_ai_response(prompt)
+                                ai_response = get_gemini_response(prompt)
 
 
                                 # 4. Save the AI's outgoing reply
@@ -505,56 +503,30 @@ tool_functions = {
 }
 
 # BUSINESS ASSISTANT API
-@csrf_exempt
 @login_required
+@csrf_exempt
 def business_assistant_api(request):
-    if not model:
-        return JsonResponse({'error': 'AI model is not configured.'}, status=500)
-
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             user_message = data.get('message')
+
             if not user_message:
                 return JsonResponse({'error': 'No message provided'}, status=400)
 
-            # Start a chat session
-            chat = model.start_chat()
-            
-            # Send the first message to the AI
-            response = chat.send_message(user_message)
-            
-            # Check if the AI wants to use a tool
-            function_call = response.candidates[0].content.parts[0].function_call
-            
-            if function_call:
-                # The AI wants to use a tool. Let's process it.
-                tool_name = function_call.name
-                tool_args = {key: value for key, value in function_call.args.items()}
+            # SINGLE, CLEAN CALL TO OUR NEW UTILITY FUNCTION
+            # We pass the message and the logged-in user object
+            ai_reply = get_assistant_response(user_message=user_message, user_object=request.user)
 
-                if tool_name in tool_functions:
-                    selected_tool = tool_functions[tool_name]
-                    tool_args['user'] = request.user
-                    tool_output = selected_tool(**tool_args)
-                    
-                    function_response_part = Part(
-                        function_response={
-                            "name": tool_name,
-                            "response": {"content": tool_output},
-                        }
-                    )
-                    # We send this structured response back to the chat
-                    response = chat.send_message(function_response_part)
+            return JsonResponse({'reply': ai_reply})
 
-            # The final reply from the AI ====
-            bot_reply = response.text
-            return JsonResponse({'reply': bot_reply})
-
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
         except Exception as e:
-            print(f"Error in business_assistant_api: {e}")
-            return JsonResponse({'error': f'An internal error occurred: {e}'}, status=500)
-    
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+            print(f"Error in business_assistant_api view: {e}")
+            return JsonResponse({'error': 'An internal error occurred'}, status=500)
+
+    return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
 
 
 
@@ -709,39 +681,15 @@ def get_facebook_user_profile(user_id, page_access_token):
 
 
 # INBOX PAGE
-# Replace the debugging inbox_list_view with this more robust version
-
 @login_required
 def inbox_list_view(request):
-
-    raise ValueError("This is my intentional crash to test if the new code is being deployed.")
-
-    # --- START OF DEBUGGING CODE ---
-    logging.warning("--- Starting inbox_list_view debug ---")
-
-    # Clue #1: Who does the server think is logged in?
-    logged_in_user = request.user
-    logging.warning(f"LOGGED-IN USER: Username='{logged_in_user.username}', ID={logged_in_user.id}")
-
-    # Clue #2: Can the server find ANY conversations in the database at all?
-    all_conversations = Conversation.objects.all()
-    logging.warning(f"DATABASE CHECK: Found {all_conversations.count()} total conversation(s) in the database.")
-
-    # Clue #3: For each conversation, who is the owner?
-    for convo in all_conversations:
-        try:
-            owner = convo.social_connection.user
-            logging.warning(f"  - Inspecting Conversation ID {convo.id}: It is owned by User '{owner.username}' (ID: {owner.id})")
-        except Exception as e:
-            logging.warning(f"  - Inspecting Conversation ID {convo.id}: Could not determine owner. Error: {e}")
-
-    logging.warning("--- End of debug ---")
-    # --- END OF DEBUGGING CODE ---
-
-    # Original query
+    """
+    Fetches and displays the list of all conversations for the logged-in user.
+    """
+    # Find all conversations linked to the social connections of the currently logged-in user
     conversations = Conversation.objects.filter(
         social_connection__user=request.user
-    ).order_by('-updated_at')
+    ).order_by('-updated_at') # Order by most recently updated
 
     context = {
         'conversations': conversations
