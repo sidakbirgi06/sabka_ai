@@ -261,29 +261,35 @@ def chat_view(request):
         user_message = request.POST.get('message')
         chat_history.append({'role': 'user', 'parts': [user_message]})
 
-        # --- Connect to the AI ---
-        load_dotenv()
+        # --- Connect to the AI (New Stateless Method) ---
         try:
-            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-            model = genai.GenerativeModel('gemini-1.5-flash-latest')
-            
-            # This is the full history including the main prompt and past messages
+            # The full history including the main prompt and ALL past messages
+            # Note: The user's latest message is already in chat_history now.
             conversation_history_for_api = [
                 {'role': 'user', 'parts': [system_prompt]},
                 {'role': 'model', 'parts': ["Understood. I am ready to assist customers for " + profile.business_name]},
             ]
+            
+            # Convert our session history to the API format
             for message in chat_history:
+                # Our session uses 'bot', the API uses 'model'
                 api_role = 'model' if message.get('role') == 'bot' else 'user'
                 conversation_history_for_api.append({'role': api_role, 'parts': message.get('parts')})
+
+            # Configure the model
+            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+            model = genai.GenerativeModel('gemini-1.5-flash-latest')
+
+            # Send the ENTIRE conversation history to the model in one go
+            response = model.generate_content(conversation_history_for_api)
             
-            chat_session = model.start_chat(history=conversation_history_for_api)
-            response = chat_session.send_message(user_message)
             ai_message = response.text
-            
             chat_history.append({'role': 'bot', 'parts': [ai_message]})
 
         except Exception as e:
-            ai_message = f"An error occurred with the AI service: {e}"
+            # The error message will now be cleaner if something goes wrong
+            print(f"AI Generation Error: {e}") # For server logs
+            ai_message = f"An error occurred with the AI service. Please try again."
             chat_history.append({'role': 'bot', 'parts': [ai_message]})
 
         request.session['chat_history'] = chat_history
