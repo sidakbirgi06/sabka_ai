@@ -18,6 +18,7 @@ from .models import SocialConnection
 from google.ai.generativelanguage import Part
 from .ai_utils import get_gemini_response, get_assistant_response
 from django.shortcuts import get_object_or_404
+from .ai_utils import get_gemini_response, get_assistant_response
 
 import logging
 
@@ -213,13 +214,12 @@ def chat_view(request):
     except (BusinessProfile.DoesNotExist, ChatbotSettings.DoesNotExist):
         return render(request, 'seller/chat.html', {'error': "Please complete your Business Profile and Chatbot Setup first."})
 
-    # This line clears the chat history when you add "?new=true" to the URL
     if 'new' in request.GET:
         if 'chat_history' in request.session:
             del request.session['chat_history']
         return redirect('chat_view')
 
-    # --- The Upgraded System Prompt (Briefing Document) ---
+    # The system prompt remains the same - it's the AI's core instructions
     system_prompt = f"""
     You are an expert AI assistant for the business named '{profile.business_name}'.
     Your assigned name is '{settings.ai_name}'. Your personality must be: '{settings.personality}'.
@@ -253,42 +253,45 @@ def chat_view(request):
     {profile.faqs}
     """
 
-    # --- Manage Chat History using Django Sessions ---
     chat_history = request.session.get('chat_history', [])
 
     if request.method == 'POST':
         user_message = request.POST.get('message')
-        chat_history.append({'role': 'user', 'parts': [user_message]})
+        chat_history.append({'role': 'user', 'content': user_message})
 
-        # --- Connect to the AI ---
-        load_dotenv()
+        # --- RECTIFIED AI CONNECTION BLOCK ---
         try:
-            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-            model = genai.GenerativeModel('gemini-1.5-flash-latest')
-            
-            # This is the full history including the main prompt and past messages
-            conversation_history_for_api = [
-                {'role': 'user', 'parts': [system_prompt]},
-                {'role': 'model', 'parts': ["Understood. I am ready to assist customers for " + profile.business_name]},
-            ]
+            # NEW: Build one "mega-prompt" with instructions and history
+            full_prompt = system_prompt + "\n\n--- CONVERSATION HISTORY ---\n"
             for message in chat_history:
-                api_role = 'model' if message.get('role') == 'bot' else 'user'
-                conversation_history_for_api.append({'role': api_role, 'parts': message.get('parts')})
+                role = "Customer" if message.get('role') == 'user' else "You"
+                full_prompt += f"{role}: {message.get('content')}\n"
             
-            chat_session = model.start_chat(history=conversation_history_for_api)
-            response = chat_session.send_message(user_message)
-            ai_message = response.text
+            # Add a final instruction for the AI's next response
+            full_prompt += "You: "
+
+            # NEW: Single, clean call to our utility function
+            ai_message = get_gemini_response(full_prompt)
             
-            chat_history.append({'role': 'bot', 'parts': [ai_message]})
+            chat_history.append({'role': 'bot', 'content': ai_message})
 
         except Exception as e:
-            ai_message = f"An error occurred with the AI service: {e}"
-            chat_history.append({'role': 'bot', 'parts': [ai_message]})
-
+            error_message = f"An error occurred with the AI service: {e}"
+            chat_history.append({'role': 'bot', 'content': error_message})
+        
         request.session['chat_history'] = chat_history
         return redirect('chat_view')
 
-    context = {'chat_history': chat_history}
+    # I also simplified the context and history loop for better readability
+    # The 'parts' key was changed to 'content' for simplicity
+    formatted_history = []
+    for message in chat_history:
+        formatted_history.append({
+            'is_user': message.get('role') == 'user',
+            'content': message.get('content')
+        })
+
+    context = {'chat_history': formatted_history}
     return render(request, 'seller/chat.html', context)
 
 
