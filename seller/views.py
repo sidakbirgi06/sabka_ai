@@ -19,6 +19,7 @@ from google.ai.generativelanguage import Part
 from .ai_utils import get_gemini_response, get_assistant_response
 from django.shortcuts import get_object_or_404
 import google.generativeai as genai
+import traceback
 
 import logging
 
@@ -286,8 +287,9 @@ def chat_view(request):
             chat_history.append({'role': 'bot', 'parts': [ai_message]})
 
         except Exception as e:
-            print(f"AI Generation Error: {e}") # For server logs
-            ai_message = f"An error occurred with the AI service. Please try again."
+            print("--- A DETAILED ERROR OCCURRED ---")
+            traceback.print_exc()  # This will print the full, detailed traceback
+            ai_message = f"A server error occurred. Check the logs for details."
             chat_history.append({'role': 'bot', 'parts': [ai_message]})
 
         request.session['chat_history'] = chat_history
