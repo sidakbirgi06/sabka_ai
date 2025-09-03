@@ -219,7 +219,7 @@ def chat_view(request):
             del request.session['chat_history']
         return redirect('chat_view')
 
-    # The system prompt remains the same - it's the AI's core instructions
+    # The system prompt creation remains the same
     system_prompt = f"""
     You are an expert AI assistant for the business named '{profile.business_name}'.
     Your assigned name is '{settings.ai_name}'. Your personality must be: '{settings.personality}'.
@@ -257,41 +257,32 @@ def chat_view(request):
 
     if request.method == 'POST':
         user_message = request.POST.get('message')
-        chat_history.append({'role': 'user', 'content': user_message})
+        chat_history.append({'role': 'user', 'parts': [user_message]})
 
-        # --- RECTIFIED AI CONNECTION BLOCK ---
+        # --- REFACTORED AI LOGIC ---
+
+        # 1. Build a single prompt string including history
+        full_prompt = system_prompt + "\n\n--- Conversation History ---\n"
+        for message in chat_history:
+            role = "Customer" if message.get('role') == 'user' else "Assistant"
+            part = message.get('parts', [''])[0] # Get the first part of the message
+            full_prompt += f"{role}: {part}\n"
+        full_prompt += "Assistant:" # Prompt the AI for its next response
+
         try:
-            # NEW: Build one "mega-prompt" with instructions and history
-            full_prompt = system_prompt + "\n\n--- CONVERSATION HISTORY ---\n"
-            for message in chat_history:
-                role = "Customer" if message.get('role') == 'user' else "You"
-                full_prompt += f"{role}: {message.get('content')}\n"
-            
-            # Add a final instruction for the AI's next response
-            full_prompt += "You: "
-
-            # NEW: Single, clean call to our utility function
-            ai_message = get_gemini_response(full_prompt)
-            
-            chat_history.append({'role': 'bot', 'content': ai_message})
+            # 2. Make a single, clean call to our utility function
+            ai_message = get_gemini_response(prompt=full_prompt)
+            chat_history.append({'role': 'bot', 'parts': [ai_message]})
 
         except Exception as e:
-            error_message = f"An error occurred with the AI service: {e}"
-            chat_history.append({'role': 'bot', 'content': error_message})
-        
+            error_message = f"An error occurred: {e}"
+            print(error_message) # For server logs
+            chat_history.append({'role': 'bot', 'parts': [error_message]})
+
         request.session['chat_history'] = chat_history
         return redirect('chat_view')
 
-    # I also simplified the context and history loop for better readability
-    # The 'parts' key was changed to 'content' for simplicity
-    formatted_history = []
-    for message in chat_history:
-        formatted_history.append({
-            'is_user': message.get('role') == 'user',
-            'content': message.get('content')
-        })
-
-    context = {'chat_history': formatted_history}
+    context = {'chat_history': chat_history}
     return render(request, 'seller/chat.html', context)
 
 
