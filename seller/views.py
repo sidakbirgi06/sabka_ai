@@ -261,33 +261,31 @@ def chat_view(request):
         user_message = request.POST.get('message')
         chat_history.append({'role': 'user', 'parts': [user_message]})
 
-        # --- Connect to the AI (New Stateless Method) ---
+        # --- Connect to the AI (Definitive Stateless Method) ---
         try:
-            # The full history including the main prompt and ALL past messages
-            # Note: The user's latest message is already in chat_history now.
-            conversation_history_for_api = [
-                {'role': 'user', 'parts': [system_prompt]},
-                {'role': 'model', 'parts': ["Understood. I am ready to assist customers for " + profile.business_name]},
-            ]
-            
-            # Convert our session history to the API format
+            # Build the conversation history ONLY from the actual chat messages
+            conversation_history_for_api = []
             for message in chat_history:
-                # Our session uses 'bot', the API uses 'model'
                 api_role = 'model' if message.get('role') == 'bot' else 'user'
                 conversation_history_for_api.append({'role': api_role, 'parts': message.get('parts')})
 
             # Configure the model
             genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-            model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
-            # Send the ENTIRE conversation history to the model in one go
+            # *** THE KEY FIX IS HERE ***
+            # We pass the system_prompt to its own dedicated parameter
+            model = genai.GenerativeModel(
+                'gemini-1.5-flash-latest',
+                system_instruction=system_prompt  # <-- Use the correct parameter
+            )
+
+            # Generate content using ONLY the conversational history
             response = model.generate_content(conversation_history_for_api)
             
             ai_message = response.text
             chat_history.append({'role': 'bot', 'parts': [ai_message]})
 
         except Exception as e:
-            # The error message will now be cleaner if something goes wrong
             print(f"AI Generation Error: {e}") # For server logs
             ai_message = f"An error occurred with the AI service. Please try again."
             chat_history.append({'role': 'bot', 'parts': [ai_message]})
@@ -297,6 +295,7 @@ def chat_view(request):
 
     context = {'chat_history': chat_history}
     return render(request, 'seller/chat.html', context)
+
 
 
 
