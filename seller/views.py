@@ -18,7 +18,7 @@ from .models import SocialConnection
 from google.ai.generativelanguage import Part
 from .ai_utils import get_gemini_response, get_assistant_response
 from django.shortcuts import get_object_or_404
-from .ai_utils import get_gemini_response, get_assistant_response
+import google.generativeai as genai
 
 import logging
 
@@ -214,12 +214,13 @@ def chat_view(request):
     except (BusinessProfile.DoesNotExist, ChatbotSettings.DoesNotExist):
         return render(request, 'seller/chat.html', {'error': "Please complete your Business Profile and Chatbot Setup first."})
 
+    # This line clears the chat history when you add "?new=true" to the URL
     if 'new' in request.GET:
         if 'chat_history' in request.session:
             del request.session['chat_history']
         return redirect('chat_view')
 
-    # The system prompt creation remains the same
+    # --- The Upgraded System Prompt (Briefing Document) ---
     system_prompt = f"""
     You are an expert AI assistant for the business named '{profile.business_name}'.
     Your assigned name is '{settings.ai_name}'. Your personality must be: '{settings.personality}'.
@@ -253,31 +254,37 @@ def chat_view(request):
     {profile.faqs}
     """
 
+    # --- Manage Chat History using Django Sessions ---
     chat_history = request.session.get('chat_history', [])
 
     if request.method == 'POST':
         user_message = request.POST.get('message')
         chat_history.append({'role': 'user', 'parts': [user_message]})
 
-        # --- REFACTORED AI LOGIC ---
-
-        # 1. Build a single prompt string including history
-        full_prompt = system_prompt + "\n\n--- Conversation History ---\n"
-        for message in chat_history:
-            role = "Customer" if message.get('role') == 'user' else "Assistant"
-            part = message.get('parts', [''])[0] # Get the first part of the message
-            full_prompt += f"{role}: {part}\n"
-        full_prompt += "Assistant:" # Prompt the AI for its next response
-
+        # --- Connect to the AI ---
+        load_dotenv()
         try:
-            # 2. Make a single, clean call to our utility function
-            ai_message = get_gemini_response(prompt=full_prompt)
+            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+            model = genai.GenerativeModel('gemini-1.5-flash-latest')
+            
+            # This is the full history including the main prompt and past messages
+            conversation_history_for_api = [
+                {'role': 'user', 'parts': [system_prompt]},
+                {'role': 'model', 'parts': ["Understood. I am ready to assist customers for " + profile.business_name]},
+            ]
+            for message in chat_history:
+                api_role = 'model' if message.get('role') == 'bot' else 'user'
+                conversation_history_for_api.append({'role': api_role, 'parts': message.get('parts')})
+            
+            chat_session = model.start_chat(history=conversation_history_for_api)
+            response = chat_session.send_message(user_message)
+            ai_message = response.text
+            
             chat_history.append({'role': 'bot', 'parts': [ai_message]})
 
         except Exception as e:
-            error_message = f"An error occurred: {e}"
-            print(error_message) # For server logs
-            chat_history.append({'role': 'bot', 'parts': [error_message]})
+            ai_message = f"An error occurred with the AI service: {e}"
+            chat_history.append({'role': 'bot', 'parts': [ai_message]})
 
         request.session['chat_history'] = chat_history
         return redirect('chat_view')
