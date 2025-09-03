@@ -496,12 +496,6 @@ def business_assistant_page(request):
     return render(request, 'seller/business_assistant_page.html')
 
 
-
-tool_functions = {
-    "get_entire_business_profile": get_entire_business_profile,
-    "update_business_profile": update_business_profile,
-}
-
 # BUSINESS ASSISTANT API
 @login_required
 @csrf_exempt
