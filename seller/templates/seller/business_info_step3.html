@@ -1,11 +1,18 @@
 {% extends 'seller/app_base.html' %}
 {% block app_content %}
 
+<div class="form-page-container">
     <div class="split-container">
         <div class="info-panel">
-            <h2>SECTION 3 OF 5</h2>
+            <h2 class="section-indicator">SECTION 3 OF 5</h2>
             <h1>Products & Inventory</h1>
             <p>This is the most important section for sales. This information will be used by the AI to answer product questions, make recommendations, and talk about deals.</p>
+            
+            <div class="progress-bar-container">
+                <div class="progress-bar">
+                    <div class="progress-bar-fill step-3"></div>
+                </div>
+            </div>
         </div>
 
         <div class="form-panel">
@@ -16,7 +23,7 @@
                     {{ form.product_categories.label_tag }}
                     {{ form.product_categories }}
                     {% if form.product_categories.help_text %}
-                        <small class="help-text">{{ form.product_categories.help_text }}</small>
+                        <small class="form-help-text">{{ form.product_categories.help_text }}</small>
                     {% endif %}
                 </div>
 
@@ -29,7 +36,7 @@
                     {{ form.top_selling_products.label_tag }}
                     {{ form.top_selling_products }}
                     {% if form.top_selling_products.help_text %}
-                        <small class="help-text">{{ form.top_selling_products.help_text }}</small>
+                        <small class="form-help-text">{{ form.top_selling_products.help_text }}</small>
                     {% endif %}
                 </div>
 
@@ -37,15 +44,17 @@
                     {{ form.combo_packs.label_tag }}
                     {{ form.combo_packs }}
                     {% if form.combo_packs.help_text %}
-                        <small class="help-text">{{ form.combo_packs.help_text }}</small>
+                        <small class="form-help-text">{{ form.combo_packs.help_text }}</small>
                     {% endif %}
                 </div>
+                
                 <div class="form-navigation">
                     <a href="{% url 'business_info_step2' %}" class="button-secondary">Back</a>
-                    <button type="submit">Save and Continue to Section 4</button>
+                    <button type="submit" class="form-submit-button">Save and Continue →</button>
                 </div>
             </form>
         </div>
     </div>
+</div>
     
 {% endblock app_content %}

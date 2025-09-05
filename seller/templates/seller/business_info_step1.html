@@ -1,13 +1,19 @@
 {% extends 'seller/app_base.html' %}
+
 {% block app_content %}
 
-    <h1 class="main-heading">Enter Your Business Information</h1>
-
+<div class="form-page-container">
     <div class="split-container">
         <div class="info-panel">
-            <h2>SECTION 1 OF 5</h2>
+            <h2 class="section-indicator">SECTION 1 OF 5</h2>
             <h1>Core Business Identity</h1>
             <p>Let's start with the basics. This information will help your AI introduce your business and answer customer questions accurately.</p>
+            
+            <div class="progress-bar-container">
+                <div class="progress-bar">
+                    <div class="progress-bar-fill"></div>
+                </div>
+            </div>
         </div>
 
         <div class="form-panel">
@@ -47,15 +53,15 @@
                 </div>
 
                 <div class="form-group wide">
-              {{ form.social_media_links.label_tag }}
-              {{ form.social_media_links }}
+                    {{ form.social_media_links.label_tag }}
+                    {{ form.social_media_links }}
                 </div>
 
-                <div style="text-align: right; margin-top: 30px;">
-                    <button type="submit">Save and Continue to Section 2</button>
+                <div style="margin-top: 30px; overflow: hidden;"> <button type="submit" class="form-submit-button">Save and Continue →</button>
                 </div>
             </form>
         </div>
     </div>
+</div>
     
 {% endblock app_content %}

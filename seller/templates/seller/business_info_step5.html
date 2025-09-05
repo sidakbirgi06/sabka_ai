@@ -1,46 +1,39 @@
 {% extends 'seller/app_base.html' %}
 {% block app_content %}
 
+<div class="form-page-container">
     <div class="split-container">
         <div class="info-panel">
-            <h2>SECTION 5 OF 5</h2>
+            <h2 class="section-indicator">SECTION 5 OF 5</h2>
             <h1>FAQs</h1>
             <p>Provide answers to common questions your customers ask. This will be direct training material for your AI assistant.</p>
+            
+            <div class="progress-bar-container">
+                <div class="progress-bar">
+                    <div class="progress-bar-fill step-5"></div>
+                </div>
+            </div>
         </div>
 
         <div class="form-panel">
             <form method="post">
                 {% csrf_token %}
-                {{ form.faqs.label_tag }}
-                {{ form.faqs }}
-                {% if form.faqs.help_text %}
-                    <small class="help-text">{{ form.faqs.help_text }}</small>
-                {% endif %}
+
+                <div class="form-group wide">
+                    {{ form.faqs.label_tag }}
+                    {{ form.faqs }}
+                    {% if form.faqs.help_text %}
+                        <small class="form-help-text">{{ form.faqs.help_text }}</small>
+                    {% endif %}
+                </div>
 
                 <div class="form-navigation">
                     <a href="{% url 'business_info_step4' %}" class="button-secondary">Back</a>
-                    <button type="submit">Finish & Save Profile</button>
+                    <button type="submit" class="form-submit-button">Finish & Save Profile ✓</button>
                 </div>
             </form>
         </div>
     </div>
-    
+</div>
+
 {% endblock app_content %}
-
-
-
-<h2>Connect Your Business</h2>
-<p>Link your social media pages to activate your AI assistant.</p>
-<a href="{% url 'facebook_connect' %}" class="button">Connect Facebook Page</a>
-
-<style>
-    .button {
-        display: inline-block;
-        padding: 10px 20px;
-        background-color: #1877F2; /* Facebook Blue */
-        color: white;
-        text-decoration: none;
-        border-radius: 5px;
-        font-weight: bold;
-    }
-</style>

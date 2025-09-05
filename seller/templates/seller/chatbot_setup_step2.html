@@ -1,13 +1,18 @@
 {% extends 'seller/app_base.html' %}
 
 {% block app_content %}
-    <h1 class="main-heading">Enter Your Chatbot Information</h1>
-
+<div class="form-page-container">
     <div class="split-container">
         <div class="info-panel">
-            <h2>SECTION 2 OF 3</h2>
+            <h2 class="section-indicator">SECTION 2 OF 3</h2>
             <h1>Sales Strategy & Operations</h1>
             <p>Define how your AI should handle the sales process and collect order information.</p>
+            
+            <div class="progress-bar-container">
+                <div class="progress-bar">
+                    <div class="progress-bar-fill chatbot-step-2"></div>
+                </div>
+            </div>
         </div>
 
         <div class="form-panel">
@@ -21,36 +26,53 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        {{ form.allow_negotiation.label_tag }}
-                        {{ form.allow_negotiation }}
+                        <div class="checkbox-group">
+                            {{ form.allow_negotiation }}
+                            {{ form.allow_negotiation.label_tag }}
+                        </div>
                     </div>
                     <div class="form-group">
-                        {{ form.allow_upselling.label_tag }}
-                        {{ form.allow_upselling }}
+                        <div class="checkbox-group">
+                            {{ form.allow_upselling }}
+                            {{ form.allow_upselling.label_tag }}
+                        </div>
                     </div>
                 </div>
 
                 <div class="form-group wide">
                     {{ form.max_discount_percent.label_tag }}
                     {{ form.max_discount_percent }}
-                    {% if form.max_discount_percent.help_text %}<small class="help-text">{{ form.max_discount_percent.help_text }}</small>{% endif %}
+                    {% if form.max_discount_percent.help_text %}<small class="form-help-text">{{ form.max_discount_percent.help_text }}</small>{% endif %}
                 </div>
 
                 <div class="form-group wide">
-                    <label style="font-weight: bold;">Details to Collect for an Order:</label>
-                    <div class="checkbox-group">
-                        <p>{{ form.collect_name }} {{ form.collect_name.label_tag }}</p>
-                        <p>{{ form.collect_phone }} {{ form.collect_phone.label_tag }}</p>
-                        <p>{{ form.collect_email }} {{ form.collect_email.label_tag }}</p>
-                        <p>{{ form.collect_address }} {{ form.collect_address.label_tag }}</p>
+                    <div class="form-section-heading">Details to Collect for an Order:</div>
+                    <div class="checkbox-grid">
+                        <div class="checkbox-group">
+                            {{ form.collect_name }}
+                            {{ form.collect_name.label_tag }}
+                        </div>
+                        <div class="checkbox-group">
+                            {{ form.collect_phone }}
+                            {{ form.collect_phone.label_tag }}
+                        </div>
+                        <div class="checkbox-group">
+                            {{ form.collect_email }}
+                            {{ form.collect_email.label_tag }}
+                        </div>
+                        <div class="checkbox-group">
+                            {{ form.collect_address }}
+                            {{ form.collect_address.label_tag }}
+                        </div>
                     </div>
                 </div>
 
                 <div class="form-navigation">
                     <a href="{% url 'chatbot_setup_step1' %}" class="button-secondary">Back</a>
-                    <button type="submit">Save and Continue to Section 3</button>
+                    <button type="submit" class="form-submit-button">Save and Continue →</button>
                 </div>
             </form>
         </div>
     </div>
+</div>
 {% endblock app_content %}

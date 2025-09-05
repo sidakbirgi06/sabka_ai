@@ -4,48 +4,48 @@
 {% block content %}
     <header class="main-header">
         <div class="logo-container">
-            <a href="{% url 'home' %}">Sabka Apna AI</a>
+            <a href="{% url 'home' %}">Karya AI</a>
         </div>
         <nav class="main-nav">
             <ul>
                 <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
                 <li><a href="{% url 'inbox' %}">Inbox</a></li>
-                <li><a href="{% url 'chat_view' %}">Test Chatbot</a></li>
                 <li><a href="{% url 'business_info_step1' %}">Business Profile</a></li>
                 <li><a href="{% url 'chatbot_setup_step1' %}">Chatbot Setup</a></li>
-
+                <li><a href="{% url 'business_assistant_page' %}">Business Assistant</a></li>
+                
+                
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="socialDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Social Connections
+                       Social Connections
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="socialDropdown">
                         {% if facebook_connection %}
-                            <li><span class="dropdown-item-text">✓ Facebook: {{ facebook_connection.page_name }}</span></li>
+                            <li><span class="dropdown-item-text"><span class="icon">✓</span> Facebook: Connected</span></li>
                         {% else %}
                             <li><a class="dropdown-item" href="{% url 'facebook_connect' %}">Connect Facebook</a></li>
                         {% endif %}
-
+                        
                         {% if instagram_connection %}
-                            <li><span class="dropdown-item-text">✓ Instagram: {{ instagram_connection.page_name }}</span></li>
+                             <li><span class="dropdown-item-text"><span class="icon">✓</span> Instagram: Connected</span></li>
                         {% else %}
                             <li><a class="dropdown-item" href="{% url 'instagram_connect' %}">Connect Instagram</a></li>
                         {% endif %}
                     </ul>
                 </li>
-                
-                <li><a href="{% url 'business_assistant_page' %}">Business Assistant</a></li>
+                        <li><a href="{% url 'chat_view' %}">Test Chatbot</a></li>
             </ul>
         </nav>
         <div class="user-info">
             {% if user.is_authenticated %}
-                <span>Hello, {{ user.username }}!</span>
-                <form action="{% url 'logout' %}" method="post" style="display: inline; margin-left: 15px;">
+                <span>Hello, {{ user.username }}</span>
+                <form action="{% url 'logout' %}" method="post" style="display: inline;">
                     {% csrf_token %}
                     <button type="submit" class="logout-button">Logout</button>
                 </form>
             {% else %}
-                <a href="{% url 'login' %}" class="nav-button">Login</a>
-                <a href="{% url 'signup' %}" class="nav-button" style="background-color: #28a745;">Sign Up</a>
+                <a href="{% url 'login' %}">Login</a>
+                <a href="{% url 'signup' %}">Sign Up</a>
             {% endif %}
         </div>
     </header>

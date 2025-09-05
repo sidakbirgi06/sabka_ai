@@ -1,13 +1,18 @@
 {% extends 'seller/app_base.html' %}
 
 {% block app_content %}
-    <h1 class="main-heading">Enter Your Chatbot Information</h1>
-
+<div class="form-page-container">
     <div class="split-container">
         <div class="info-panel">
-            <h2>SECTION 3 OF 3</h2>
+            <h2 class="section-indicator">SECTION 3 OF 3</h2>
             <h1>Human Support & Error Handling</h1>
             <p>Tell the AI what to do when it gets stuck or when a human is needed. This makes your AI reliable.</p>
+
+            <div class="progress-bar-container">
+                <div class="progress-bar">
+                    <div class="progress-bar-fill chatbot-step-3"></div>
+                </div>
+            </div>
         </div>
 
         <div class="form-panel">
@@ -23,7 +28,7 @@
                     {{ form.custom_error_reply.label_tag }}
                     {{ form.custom_error_reply }}
                     {% if form.custom_error_reply.help_text %}
-                        <small class="help-text">{{ form.custom_error_reply.help_text }}</small>
+                        <small class="form-help-text">{{ form.custom_error_reply.help_text }}</small>
                     {% endif %}
                 </div>
 
@@ -31,19 +36,23 @@
                     {{ form.human_escalation_keywords.label_tag }}
                     {{ form.human_escalation_keywords }}
                     {% if form.human_escalation_keywords.help_text %}
-                        <small class="help-text">{{ form.human_escalation_keywords.help_text }}</small>
+                        <small class="form-help-text">{{ form.human_escalation_keywords.help_text }}</small>
                     {% endif %}
                 </div>
 
                 <div class="form-group wide">
-                    {{ form.high_priority_alert }}
-                    {{ form.high_priority_alert.label_tag }}
+                    <div class="checkbox-group">
+                        {{ form.high_priority_alert }}
+                        {{ form.high_priority_alert.label_tag }}
+                    </div>
                 </div>
+                
                 <div class="form-navigation">
                     <a href="{% url 'chatbot_setup_step2' %}" class="button-secondary">Back</a>
-                    <button type="submit">Finish & Save Settings</button>
+                    <button type="submit" class="form-submit-button">Finish & Save Settings ✓</button>
                 </div>
             </form>
         </div>
     </div>
+</div>
 {% endblock app_content %}
