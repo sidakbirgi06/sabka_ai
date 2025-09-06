@@ -17,7 +17,7 @@
         </div>
 
         <div class="chat-input-area">
-            <form class="chat-input-form" id="assistant-form" method="post">
+            <form class="chat-input-form" id="assistant-form">
                 {% csrf_token %}
                 <input type="text" class="chat-input" id="assistant-input" name="message" placeholder="Ask me anything or give me a command..." autocomplete="off" autofocus>
                 <button type="submit" class="send-button" aria-label="Send">
@@ -28,4 +28,101 @@
     </div>
 </div>
 
+<script>
+    // Get the new HTML elements using their specific IDs
+    const chatForm = document.getElementById('assistant-form');
+    const chatInput = document.getElementById('assistant-input');
+    const messageArea = document.getElementById('chat-messages');
+    // Get the CSRF token from the form for our POST request
+    const csrfToken = chatForm.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    chatForm.addEventListener('submit', event => {
+        event.preventDefault(); // Prevent page reload
+
+        const userMessage = chatInput.value.trim();
+        if (!userMessage) {
+            return;
+        }
+
+        // 1. Display the user's message in the new format
+        appendMessage('user', userMessage);
+        chatInput.value = '';
+
+        // Optional: Show a "typing..." indicator for the bot
+        appendMessage('bot', '...', true);
+
+        // 2. Send the user's message to the backend API
+        fetch("{% url 'business_assistant_api' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken // Include the CSRF token
+            },
+            body: JSON.stringify({ message: userMessage })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // 3. Receive the AI's response and display it
+            const botReply = data.reply || "I'm sorry, I didn't get a valid response.";
+            updateBotMessage(botReply); // Update the "typing..." message with the real reply
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            updateBotMessage('Sorry, I seem to be having trouble connecting to my brain right now. Please try again in a moment.');
+        });
+    });
+
+    // A function to add a new message to the chat window
+    function appendMessage(sender, text, isTyping = false) {
+        const messageGroup = document.createElement('div');
+        messageGroup.classList.add('message-group', sender);
+
+        if (isTyping) {
+            messageGroup.id = 'typing-indicator'; // Give it an ID so we can find it later
+        }
+
+        const avatar = document.createElement('div');
+        avatar.classList.add('avatar');
+        avatar.textContent = (sender === 'user') ? 'You' : 'AI';
+
+        const messageBubble = document.createElement('div');
+        messageBubble.classList.add('message-bubble');
+
+        // Handle typing indicator text
+        if (isTyping) {
+            messageBubble.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+            // Add some basic CSS for the dots
+            const style = document.createElement('style');
+            style.innerHTML = `
+                .dot { display: inline-block; width: 8px; height: 8px; background-color: #aeb9d8; border-radius: 50%; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
+                .dot:nth-child(2) { animation-delay: -0.16s; }
+                .dot:nth-child(3) { animation-delay: -0.32s; }
+                @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+            `;
+            document.head.appendChild(style);
+        } else {
+            // Convert newlines to <br> tags for proper display
+            messageBubble.innerHTML = text.replace(/\n/g, '<br>');
+        }
+        
+        messageGroup.appendChild(avatar);
+        messageGroup.appendChild(messageBubble);
+        messageArea.appendChild(messageGroup);
+        messageArea.scrollTop = messageArea.scrollHeight;
+    }
+
+    // A function to find the "typing..." message and replace it with the real one
+    function updateBotMessage(newText) {
+        const typingIndicator = document.getElementById('typing-indicator');
+        if (typingIndicator) {
+            const messageBubble = typingIndicator.querySelector('.message-bubble');
+            messageBubble.innerHTML = newText.replace(/\n/g, '<br>'); // Update text
+            typingIndicator.id = ''; // Remove ID to prevent it from being updated again
+        } else {
+            // If for some reason there was no typing indicator, just append a new message
+            appendMessage('bot', newText);
+        }
+        messageArea.scrollTop = messageArea.scrollHeight;
+    }
+</script>
 {% endblock app_content %}
