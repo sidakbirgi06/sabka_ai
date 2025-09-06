@@ -2,56 +2,69 @@
 {% load static %}
 
 {% block content %}
-    <header class="main-header">
-        <div class="logo-container">
-            <a href="{% url 'home' %}">Karya AI</a>
-        </div>
-        <nav class="main-nav">
-            <ul>
-                <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
-                <li><a href="{% url 'inbox' %}">Inbox</a></li>
-                <li><a href="{% url 'business_info_step1' %}">Business Profile</a></li>
-                <li><a href="{% url 'chatbot_setup_step1' %}">Chatbot Setup</a></li>
-                <li><a href="{% url 'business_assistant_page' %}">Business Assistant</a></li>
-                
-                
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="socialDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                       Social Connections
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="socialDropdown">
-                        {% if facebook_connection %}
-                            <li><span class="dropdown-item-text"><span class="icon">✓</span> Facebook: Connected</span></li>
-                        {% else %}
-                            <li><a class="dropdown-item" href="{% url 'facebook_connect' %}">Connect Facebook</a></li>
-                        {% endif %}
-                        
-                        {% if instagram_connection %}
-                             <li><span class="dropdown-item-text"><span class="icon">✓</span> Instagram: Connected</span></li>
-                        {% else %}
-                            <li><a class="dropdown-item" href="{% url 'instagram_connect' %}">Connect Instagram</a></li>
-                        {% endif %}
-                    </ul>
-                </li>
-                        <li><a href="{% url 'chat_view' %}">Test Chatbot</a></li>
-            </ul>
-        </nav>
-        <div class="user-info">
-            {% if user.is_authenticated %}
-                <span>Hello, {{ user.username }}</span>
-                <form action="{% url 'logout' %}" method="post" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="logout-button">Logout</button>
-                </form>
-            {% else %}
-                <a href="{% url 'login' %}">Login</a>
-                <a href="{% url 'signup' %}">Sign Up</a>
-            {% endif %}
-        </div>
-    </header>
+<header>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'home' %}">Karya AI</a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-    <main class="main-content">
-        {% block app_content %}
-        {% endblock %}
-    </main>
+            <div class="collapse navbar-collapse" id="mainNavbar">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'inbox' %}">Inbox</a></li>
+                    
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="setupDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Setup
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="setupDropdown">
+                            <li><a class="dropdown-item" href="{% url 'business_info_step1' %}">Business Profile</a></li>
+                            <li><a class="dropdown-item" href="{% url 'chatbot_setup_step1' %}">Chatbot Setup</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item"><a class="nav-link" href="{% url 'business_assistant_page' %}">Business Assistant</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'chat_view' %}">Test Chatbot</a></li>
+                    
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="socialDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Social Connections
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="socialDropdown">
+                            {% if facebook_connection %}
+                                <li><span class="dropdown-item-text"><span class="icon">✓</span> Facebook: Connected</span></li>
+                            {% else %}
+                                <li><a class="dropdown-item" href="{% url 'facebook_connect' %}">Connect Facebook</a></li>
+                            {% endif %}
+                            
+                            {% if instagram_connection %}
+                                 <li><span class="dropdown-item-text"><span class="icon">✓</span> Instagram: Connected</span></li>
+                            {% else %}
+                                <li><a class="dropdown-item" href="{% url 'instagram_connect' %}">Connect Instagram</a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                </ul>
+
+                <div class="user-info">
+                    {% if user.is_authenticated %}
+                        <span>Hello, {{ user.username }}</span>
+                        <form action="{% url 'logout' %}" method="post" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="logout-button">Logout</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<main class="main-content">
+    {% block app_content %}
+    {% endblock %}
+</main>
 {% endblock %}

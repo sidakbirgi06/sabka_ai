@@ -1,39 +1,39 @@
 {% extends 'seller/app_base.html' %}
 
 {% block app_content %}
-    <h1 class="main-heading">Chatbot Testing Room</h1>
-    <p class="section-description" style="text-align: center; margin-top: -20px; margin-bottom: 30px;">
-        This is your private room to test your AI's responses.
-        <a href="{% url 'chat_view' %}?new=true">Start New Conversation</a>
-    </p>
+<div class="chat-page-container">
+    
+    <div class="chat-header">
+        <h1>Chatbot Testing Room</h1>
+        <p>This is your private room to test your AI's responses. <a href="{% url 'chat_view' %}?new=true">Start New Conversation</a></p>
+    </div>
 
     <div class="chat-container">
-        <div id="chat-messages" class="chat-messages">
-            {% if error %}
-                <div class="message bot-message"><p>{{ error }}</p></div>
-            {% endif %}
-
-            {% for message in chat_history %}
-                {% if message.role == 'bot' %}
-                    <div class="message bot-message">
-                        <p>{{ message.parts.0 }}</p>
+        <div class="chat-messages" id="chat-messages">
+            {% for sender, message in conversation_history %}
+                {% if sender == 'bot' %}
+                    <div class="message-group bot">
+                        <div class="avatar">AI</div>
+                        <div class="message-bubble">{{ message|linebreaksbr }}</div>
                     </div>
                 {% else %}
-                     <div class="message user-message">
-                        <p>{{ message.parts.0 }}</p>
+                    <div class="message-group user">
+                        <div class="avatar">You</div>
+                        <div class="message-bubble">{{ message|linebreaksbr }}</div>
                     </div>
                 {% endif %}
             {% endfor %}
         </div>
-        <form method="post" class="chat-input-form">
-            {% csrf_token %}
-            <input type="text" name="message" class="chat-input" placeholder="Type your message..." autocomplete="off" autofocus>
-            <button type="submit">Send</button>
-        </form>
-    </div>
 
-    <script>
-        const chatWindow = document.getElementById('chat-messages');
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-    </script>
+        <div class="chat-input-area">
+            <form class="chat-input-form" id="chat-form" method="post">
+                {% csrf_token %}
+                <input type="text" class="chat-input" name="message" placeholder="Type your message..." autocomplete="off" autofocus>
+                <button type="submit" class="send-button" aria-label="Send">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" /></svg>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock app_content %}
