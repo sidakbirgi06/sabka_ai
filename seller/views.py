@@ -14,7 +14,7 @@ import requests
 from django.conf import settings
 from django.urls import reverse
 from django.contrib.auth.models import User
-from .models import SocialConnection
+from .models import SocialConnection, AssistantConversation, AssistantChatMessage
 from google.ai.generativelanguage import Part
 from .ai_utils import get_gemini_response, get_assistant_response
 from django.shortcuts import get_object_or_404
@@ -463,31 +463,108 @@ def business_assistant_page(request):
     return render(request, 'seller/business_assistant_page.html')
 
 
-# BUSINESS ASSISTANT API
+# BUSINESS ASSISTANT COBERSATION LIST, HISTORY AND API AND DELETE CONVO
+@login_required
+def list_conversations(request):
+    """API endpoint to list all conversations for the logged-in user."""
+    conversations = AssistantConversation.objects.filter(user=request.user)
+    data = [{
+        'id': conv.id,
+        'title': conv.title,
+        'created_at': conv.created_at.strftime('%Y-%m-%d %H:%M')
+    } for conv in conversations]
+    return JsonResponse(data, safe=False)
+
+@login_required
+def get_conversation_history(request, conversation_id):
+    """API endpoint to get all messages for a specific conversation."""
+    try:
+        conversation = AssistantConversation.objects.get(id=conversation_id, user=request.user)
+        messages = conversation.messages.all()
+        data = [{
+            'role': msg.role,
+            'content': msg.content
+        } for msg in messages]
+        return JsonResponse(data, safe=False)
+    except AssistantConversation.DoesNotExist:
+        return JsonResponse({'error': 'Conversation not found'}, status=404)
+
 @login_required
 @csrf_exempt
-def business_assistant_api(request):
+def assistant_chat_api(request):
+    """The main API for sending a message to the assistant."""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             user_message = data.get('message')
+            conversation_id = data.get('conversation_id') # Can be null for a new chat
 
             if not user_message:
                 return JsonResponse({'error': 'No message provided'}, status=400)
 
-            # SINGLE, CLEAN CALL TO OUR NEW UTILITY FUNCTION
-            # We pass the message and the logged-in user object
-            ai_reply = get_assistant_response(user_message=user_message, user_object=request.user)
+            conversation = None
+            if conversation_id:
+                # Add to an existing conversation
+                conversation = AssistantConversation.objects.get(id=conversation_id, user=request.user)
+            else:
+                # Start a new conversation
+                conversation = AssistantConversation.objects.create(user=request.user)
 
-            return JsonResponse({'reply': ai_reply})
+            # Save user message to DB
+            AssistantChatMessage.objects.create(
+                conversation=conversation,
+                role='user',
+                content=user_message
+            )
 
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+            # Prepare history for the AI model
+            history_for_ai = []
+            db_messages = conversation.messages.all()
+            for msg in db_messages:
+                history_for_ai.append({'role': msg.role, 'parts': [{'text': msg.content}]})
+
+            # Get AI response
+            ai_reply = get_assistant_response(history=history_for_ai, user_object=request.user)
+
+            # Save AI response to DB
+            AssistantChatMessage.objects.create(
+                conversation=conversation,
+                role='model',
+                content=ai_reply
+            )
+            
+            # (Optional Title Generation can be added here in the future)
+
+            return JsonResponse({
+                'reply': ai_reply,
+                'conversation_id': conversation.id
+            })
+
+        except AssistantConversation.DoesNotExist:
+            return JsonResponse({'error': 'Conversation not found'}, status=404)
         except Exception as e:
-            print(f"Error in business_assistant_api view: {e}")
+            print(f"Error in assistant_chat_api: {e}")
             return JsonResponse({'error': 'An internal error occurred'}, status=500)
 
     return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
+
+
+@login_required
+@csrf_exempt # Or ensure CSRF token is sent with DELETE request
+def delete_conversation(request, conversation_id):
+    """API endpoint to delete a specific conversation."""
+    if request.method == 'DELETE':
+        try:
+            # Security check: ensure the conversation exists and belongs to the logged-in user
+            conversation = AssistantConversation.objects.get(id=conversation_id, user=request.user)
+            conversation.delete()
+            return JsonResponse({'status': 'success', 'message': 'Conversation deleted successfully.'})
+        except AssistantConversation.DoesNotExist:
+            return JsonResponse({'error': 'Conversation not found or you do not have permission to delete it.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': f'An internal error occurred: {e}'}, status=500)
+    
+    return JsonResponse({'error': 'Only DELETE method is allowed'}, status=405)
 
 
 

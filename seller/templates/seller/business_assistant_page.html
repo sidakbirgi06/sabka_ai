@@ -1,128 +1,366 @@
 {% extends 'seller/app_base.html' %}
 
 {% block app_content %}
-<div class="chat-page-container">
+<style>
+    /* --- THEME COLORS --- */
+    :root {
+        --bg-main: #1e1e1e;
+        --bg-sidebar: #252526;
+        --bg-input: #3c3c3c;
+        --text-primary: #e0e0e0;
+        --text-secondary: #a0a0a0;
+        --border-color: #3c3c3c;
+        --accent-color: #007acc;
+        --user-bubble-bg: #004a7c;
+        --bot-bubble-bg: #333333;
+        --danger-color: #f44336;
+        --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    /* ---
+    THE FULL SCREEN LAYOUT FIX
+    --- */
+    .gemini-container {
+        position: fixed;
+        /* --- FIX: Increased top margin to prevent navbar overlap --- */
+        /* You can adjust this value if your navbar height is different */
+        top: 70px; 
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        color: var(--text-primary);
+        background-color: var(--bg-main);
+        font-family: var(--font-family);
+    }
     
-    <div class="chat-header">
-        <h1>Business Assistant</h1>
-        <p>Your AI co-pilot. Ask about your sales, inventory, or business profile. You can also tell me to make changes.</p>
+    body {
+        overflow: hidden;
+    }
+
+    /* --- Sidebar Styling --- */
+    .sidebar {
+        width: 280px;
+        background-color: var(--bg-sidebar);
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid var(--border-color);
+        transition: width 0.3s ease;
+        flex-shrink: 0;
+    }
+    .chat-history {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+    
+    /* --- NEW WELCOME SCREEN FOR EMPTY CHATS --- */
+    #welcome-screen {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 2rem;
+    }
+    .welcome-logo {
+        width: 60px;
+        height: 60px;
+        margin-bottom: 1.5rem;
+        background: linear-gradient(45deg, var(--accent-color), #8a2be2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .welcome-logo svg {
+        width: 32px;
+        height: 32px;
+        color: white;
+    }
+    #welcome-screen h1 {
+        font-size: 2rem;
+        font-weight: 500;
+    }
+    #welcome-screen p {
+        color: var(--text-secondary);
+        max-width: 400px;
+    }
+
+    /* --- Main Chat Area --- */
+    .chat-page-container {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        background-color: var(--bg-main);
+    }
+    .chat-container {
+        flex-grow: 1;
+        display: none; /* Hidden by default, shown when a chat is active */
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .chat-container.active {
+        display: flex;
+    }
+    .chat-messages {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 2rem;
+        max-width: 850px;
+        width: 100%;
+        margin: 0 auto;
+    }
+    
+    /* All other styles for buttons, messages, input etc. */
+    .new-chat-btn { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-primary); text-align: left; padding: 10px 15px; border-radius: 8px; margin-bottom: 1rem; cursor: pointer; transition: background-color 0.2s; }
+    .new-chat-btn:hover { background-color: var(--bg-input); }
+    .chat-history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-radius: 8px; cursor: pointer; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chat-history-item:hover, .chat-history-item.active { background-color: var(--bg-input); }
+    .chat-history-item.active { background-color: var(--accent-color); color: white; }
+    .delete-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 5px; display: none; opacity: 0.7; }
+    .chat-history-item:hover .delete-btn { display: inline-block; }
+    .delete-btn:hover { opacity: 1; color: var(--danger-color); }
+    .delete-btn svg { width: 16px; height: 16px; }
+    .message-group { display: flex; align-items: flex-start; margin-bottom: 1rem; max-width: 85%; }
+    .message-group.user { margin-left: auto; flex-direction: row-reverse; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background-color: var(--accent-color); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin: 0 10px; flex-shrink: 0; }
+    .message-group.user .avatar { background-color: var(--user-bubble-bg); }
+    .message-bubble { padding: 12px 18px; border-radius: 18px; background-color: var(--bot-bubble-bg); line-height: 1.5; }
+    .message-group.user .message-bubble { background-color: var(--user-bubble-bg); }
+    .chat-input-area { padding: 1rem; padding-top: 0.5rem; }
+    .chat-input-form { display: flex; align-items: center; background-color: var(--bg-input); border-radius: 25px; padding: 5px; max-width: 850px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+    .chat-input { flex-grow: 1; border: none; background: transparent; padding: 10px 15px; color: var(--text-primary); outline: none; font-size: 1rem; }
+    .send-button { background-color: var(--accent-color); border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; }
+    .send-button svg { width: 20px; height: 20px; }
+</style>
+
+<div class="gemini-container">
+    <div class="sidebar">
+        <button class="new-chat-btn" id="new-chat-btn">
+            + New Chat
+        </button>
+        <div class="chat-history" id="chat-history-list">
+            </div>
     </div>
 
-    <div class="chat-container">
-        <div class="chat-messages" id="chat-messages">
-            <div class="message-group bot">
-                <div class="avatar">AI</div>
-                <div class="message-bubble">Hello! I am your Business Assistant. How can I help you manage your business today?</div>
+    <div class="chat-page-container">
+        
+        <div id="welcome-screen">
+            <div class="welcome-logo">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.25a.75.75 0 0 1 .75.75v3.065a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM12 17.935a.75.75 0 0 1 .75.75v3.065a.75.75 0 0 1-1.5 0v-3.065a.75.75 0 0 1 .75-.75ZM8.636 4.364a.75.75 0 0 1 .75-.75h3.065a.75.75 0 0 1 0 1.5H9.386a.75.75 0 0 1-.75-.75ZM12.53 17.185a.75.75 0 0 1 0 1.5H9.386a.75.75 0 0 1 0-1.5h3.144ZM5.293 6.707a.75.75 0 0 1 1.06 0L9 9.343a.75.75 0 1 1-1.06 1.06L5.293 7.767a.75.75 0 0 1 0-1.06ZM14.95 14.95a.75.75 0 0 1 1.06 0l2.652 2.652a.75.75 0 1 1-1.06 1.06l-2.652-2.652a.75.75 0 0 1 0-1.06ZM18.707 5.293a.75.75 0 0 1 0 1.06L16.061 9a.75.75 0 1 1-1.06-1.06l2.652-2.652a.75.75 0 0 1 1.06 0ZM9.343 14.95l-2.652 2.652a.75.75 0 1 1-1.06-1.06L7.939 14.95a.75.75 0 1 1 1.06 1.06Z" /></svg>
             </div>
+            <h1>Karya AI</h1>
+            <p>Your intelligent business assistant. Let me help you manage your profile, get insights, and more.</p>
         </div>
 
-        <div class="chat-input-area">
-            <form class="chat-input-form" id="assistant-form">
-                {% csrf_token %}
-                <input type="text" class="chat-input" id="assistant-input" name="message" placeholder="Ask me anything or give me a command..." autocomplete="off" autofocus>
-                <button type="submit" class="send-button" aria-label="Send">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" /></svg>
-                </button>
-            </form>
+        <div class="chat-container" id="chat-container">
+            <div class="chat-messages" id="chat-messages">
+                </div>
+            <div class="chat-input-area">
+                <form class="chat-input-form" id="assistant-form">
+                    {% csrf_token %}
+                    <input type="text" class="chat-input" id="assistant-input" placeholder="Ask me anything..." autocomplete="off">
+                    <button type="submit" class="send-button" aria-label="Send">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" /></svg>
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Get the new HTML elements using their specific IDs
+document.addEventListener('DOMContentLoaded', function () {
+    // --- ELEMENT REFERENCES ---
+    const welcomeScreen = document.getElementById('welcome-screen');
+    const chatContainer = document.getElementById('chat-container');
+    const chatHistoryList = document.getElementById('chat-history-list');
+    const messageArea = document.getElementById('chat-messages');
     const chatForm = document.getElementById('assistant-form');
     const chatInput = document.getElementById('assistant-input');
-    const messageArea = document.getElementById('chat-messages');
-    // Get the CSRF token from the form for our POST request
-    const csrfToken = chatForm.querySelector('[name=csrfmiddlewaretoken]').value;
+    const newChatBtn = document.getElementById('new-chat-btn');
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-    chatForm.addEventListener('submit', event => {
-        event.preventDefault(); // Prevent page reload
+    let currentConversationId = null;
 
-        const userMessage = chatInput.value.trim();
-        if (!userMessage) {
-            return;
+    // --- VIEW MANAGEMENT ---
+    function showWelcomeScreen() {
+        welcomeScreen.style.display = 'flex';
+        chatContainer.classList.remove('active');
+    }
+
+    function showChatScreen() {
+        welcomeScreen.style.display = 'none';
+        chatContainer.classList.add('active');
+    }
+
+    // --- CHAT LOGIC ---
+    function startNewChat(event) {
+        // --- FIX: Stop this click from propagating to other elements ---
+        if (event) {
+            event.stopPropagation();
         }
+        
+        console.log("Attempting to start a new chat...");
+        document.querySelectorAll('.chat-history-item').forEach(item => item.classList.remove('active'));
+        currentConversationId = null;
+        messageArea.innerHTML = '';
+        showWelcomeScreen();
+        chatInput.focus();
+        console.log("New chat state initiated. Welcome screen should be visible.");
+    }
+    
+    // --- CORRECTED FUNCTION to fix the event bubbling issue ---
+    async function fetchConversations() {
+        try {
+            const response = await fetch("{% url 'list_conversations' %}");
+            if (!response.ok) throw new Error('Failed to fetch conversations');
+            const conversations = await response.json();
+            chatHistoryList.innerHTML = '';
+            conversations.forEach(conv => {
+                const item = document.createElement('div');
+                item.classList.add('chat-history-item');
+                item.dataset.id = conv.id;
+                
+                // Create a separate span for the title
+                const title = document.createElement('span');
+                title.textContent = conv.title;
+                title.style.flexGrow = '1'; // Allow title to take up space
+                title.style.overflow = 'hidden';
+                title.style.textOverflow = 'ellipsis';
+                
+                // --- FIX: Make ONLY the title clickable ---
+                title.onclick = () => loadConversation(conv.id);
+                item.appendChild(title);
 
-        // 1. Display the user's message in the new format
+                const deleteButton = document.createElement('button');
+                deleteButton.classList.add('delete-btn');
+                deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.492-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.71l.5 5a.75.75 0 1 1-1.498.142l-.5-5A.75.75 0 0 1 6.05 6Zm2.634.71a.75.75 0 0 0-.786-.71a.75.75 0 0 0-.787.71l.5 5a.75.75 0 0 0 1.498-.142l-.5-5Z" clip-rule="evenodd" /></svg>`;
+                deleteButton.onclick = (event) => deleteConversation(conv.id, event);
+                item.appendChild(deleteButton);
+                
+                chatHistoryList.appendChild(item);
+            });
+        } catch (error) {
+            console.error('Error fetching conversations:', error);
+        }
+    }
+    
+    // All other functions (loadConversation, sendMessage, deleteConversation, etc.)
+    // are correct and do not need to be changed. I am including them for completeness.
+
+    async function loadConversation(conversationId) {
+        console.log(`Loading conversation ID: ${conversationId}`);
+        showChatScreen();
+        currentConversationId = conversationId;
+        messageArea.innerHTML = '<div style="text-align: center; color: var(--text-secondary);">Loading chat...</div>';
+        document.querySelectorAll('.chat-history-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.id == conversationId);
+        });
+        try {
+            const response = await fetch(`/api/assistant/conversations/${conversationId}/`);
+            if (!response.ok) throw new Error('Failed to load conversation');
+            const messages = await response.json();
+            messageArea.innerHTML = '';
+            messages.forEach(msg => {
+                appendMessage(msg.role === 'user' ? 'user' : 'bot', msg.content);
+            });
+        } catch (error) {
+            console.error('Error loading conversation:', error);
+            messageArea.innerHTML = '<div style="text-align: center; color: var(--danger-color);">Failed to load chat.</div>';
+        }
+    }
+
+    async function sendMessage(event) {
+        event.preventDefault();
+        const userMessage = chatInput.value.trim();
+        if (!userMessage) return;
+        if (!currentConversationId) {
+            showChatScreen();
+            messageArea.innerHTML = '';
+        }
         appendMessage('user', userMessage);
         chatInput.value = '';
-
-        // Optional: Show a "typing..." indicator for the bot
         appendMessage('bot', '...', true);
+        try {
+            const response = await fetch("{% url 'assistant_chat_api' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ message: userMessage, conversation_id: currentConversationId })
+            });
+            if (!response.ok) throw new Error('API response was not ok.');
+            const data = await response.json();
+            updateBotMessage(data.reply);
+            if (!currentConversationId) {
+                currentConversationId = data.conversation_id;
+                await fetchConversations();
+                document.querySelectorAll('.chat-history-item').forEach(item => {
+                    item.classList.toggle('active', item.dataset.id == currentConversationId);
+                });
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+            updateBotMessage('Sorry, an error occurred. Please try again.');
+        }
+    }
 
-        // 2. Send the user's message to the backend API
-        fetch("{% url 'business_assistant_api' %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken // Include the CSRF token
-            },
-            body: JSON.stringify({ message: userMessage })
-        })
-        .then(response => response.json())
-        .then(data => {
-            // 3. Receive the AI's response and display it
-            const botReply = data.reply || "I'm sorry, I didn't get a valid response.";
-            updateBotMessage(botReply); // Update the "typing..." message with the real reply
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            updateBotMessage('Sorry, I seem to be having trouble connecting to my brain right now. Please try again in a moment.');
-        });
-    });
-
-    // A function to add a new message to the chat window
+    async function deleteConversation(conversationId, event) {
+        event.stopPropagation();
+        if (!confirm('Are you sure you want to delete this chat?')) return;
+        try {
+            const response = await fetch(`/api/assistant/conversations/${conversationId}/delete/`, {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': csrfToken }
+            });
+            if (!response.ok) throw new Error('Failed to delete conversation.');
+            if (currentConversationId == conversationId) {
+                startNewChat(null); // Pass null as we don't have an event object
+            }
+            await fetchConversations();
+        } catch (error) {
+            console.error('Error deleting conversation:', error);
+            alert('Could not delete the conversation.');
+        }
+    }
+    
     function appendMessage(sender, text, isTyping = false) {
         const messageGroup = document.createElement('div');
         messageGroup.classList.add('message-group', sender);
-
-        if (isTyping) {
-            messageGroup.id = 'typing-indicator'; // Give it an ID so we can find it later
-        }
-
+        if (isTyping) messageGroup.id = 'typing-indicator';
         const avatar = document.createElement('div');
         avatar.classList.add('avatar');
         avatar.textContent = (sender === 'user') ? 'You' : 'AI';
-
         const messageBubble = document.createElement('div');
         messageBubble.classList.add('message-bubble');
-
-        // Handle typing indicator text
-        if (isTyping) {
-            messageBubble.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
-            // Add some basic CSS for the dots
-            const style = document.createElement('style');
-            style.innerHTML = `
-                .dot { display: inline-block; width: 8px; height: 8px; background-color: #aeb9d8; border-radius: 50%; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
-                .dot:nth-child(2) { animation-delay: -0.16s; }
-                .dot:nth-child(3) { animation-delay: -0.32s; }
-                @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
-            `;
-            document.head.appendChild(style);
-        } else {
-            // Convert newlines to <br> tags for proper display
-            messageBubble.innerHTML = text.replace(/\n/g, '<br>');
-        }
-        
+        messageBubble.innerHTML = isTyping ? '...' : text.replace(/\n/g, '<br>');
         messageGroup.appendChild(avatar);
         messageGroup.appendChild(messageBubble);
         messageArea.appendChild(messageGroup);
         messageArea.scrollTop = messageArea.scrollHeight;
     }
 
-    // A function to find the "typing..." message and replace it with the real one
     function updateBotMessage(newText) {
         const typingIndicator = document.getElementById('typing-indicator');
         if (typingIndicator) {
             const messageBubble = typingIndicator.querySelector('.message-bubble');
-            messageBubble.innerHTML = newText.replace(/\n/g, '<br>'); // Update text
-            typingIndicator.id = ''; // Remove ID to prevent it from being updated again
+            messageBubble.innerHTML = newText.replace(/\n/g, '<br>');
+            typingIndicator.id = '';
         } else {
-            // If for some reason there was no typing indicator, just append a new message
             appendMessage('bot', newText);
         }
         messageArea.scrollTop = messageArea.scrollHeight;
     }
+
+    // --- EVENT LISTENERS & INITIALIZATION ---
+    chatForm.addEventListener('submit', sendMessage);
+    newChatBtn.addEventListener('click', startNewChat);
+
+    fetchConversations();
+    startNewChat(null); // Pass null initially as there's no event
+});
 </script>
+
 {% endblock app_content %}

@@ -184,3 +184,25 @@ class Message(models.Model):
     def __str__(self):
         return f"Message from {self.get_sender_type_display()} at {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
     
+
+
+class AssistantConversation(models.Model):
+    """Represents a single, distinct chat session with the Business Assistant."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assistant_conversations')
+    title = models.CharField(max_length=200, default='New Conversation')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"'{self.title}' for {self.user.username}"
+
+class AssistantChatMessage(models.Model):
+    """Represents a single message within an AssistantConversation."""
+    conversation = models.ForeignKey(AssistantConversation, on_delete=models.CASCADE, related_name='messages')
+    # Using 'role' to distinguish who sent the message
+    # 'user' for the human, 'model' for the AI
+    role = models.CharField(max_length=10) 
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.role.capitalize()} message at {self.timestamp.strftime('%Y-%m-%d %H:%M')}"

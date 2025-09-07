@@ -41,7 +41,10 @@ urlpatterns = [
 
     # Business Assistant URLs
     path('business-assistant/', views.business_assistant_page, name='business_assistant_page'),
-    path('api/business-assistant-chat/', views.business_assistant_api, name='business_assistant_api'),
+    path('api/assistant/conversations/', views.list_conversations, name='list_conversations'),
+    path('api/assistant/conversations/<int:conversation_id>/', views.get_conversation_history, name='get_conversation_history'),
+    path('api/assistant/conversations/<int:conversation_id>/delete/', views.delete_conversation, name='delete_conversation'),
+    path('api/assistant/chat/', views.assistant_chat_api, name='assistant_chat_api'),
 
 
     # for inbox
