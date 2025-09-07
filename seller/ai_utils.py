@@ -52,12 +52,12 @@ def get_assistant_response(user_message, user_object):
 
         genai.configure(api_key=api_key)
 
-        # IMPORTANT: Configure the model with our specific tools and system prompt
+        # Configure the model with our specific tools and system prompt
         model = genai.GenerativeModel(
             model_name='gemini-1.5-flash',
             tools=[get_entire_business_profile, update_business_profile],
             system_instruction=(
-                "You are a helpful and intelligent business assistant for the 'Sabka Apna AI' platform. "
+                "You are a helpful and intelligent business assistant for the 'Karya AI' platform. " # Updated brand name
                 "Your primary goal is to help the user manage their business profile by answering their questions and updating their information using the provided tools. "
                 "The 'user' parameter for all tools will be provided automatically by the system. You must never ask the user for any kind of user ID."
                 "\n\n"
@@ -76,34 +76,30 @@ def get_assistant_response(user_message, user_object):
         chat_session = model.start_chat()
         response = chat_session.send_message(user_message)
 
-        # Manual Function Calling: Check if the model wants to use a tool
-        for function_call in response.function_calls:
-            # Get the name of the tool the AI wants to use
-            tool_name = function_call.name
-            
-            # Find the actual Python function to call
-            tool_to_call = {
-                "get_entire_business_profile": get_entire_business_profile,
-                "update_business_profile": update_business_profile,
-            }[tool_name]
-            
-            # Get the arguments from the AI
-            tool_args = function_call.args
-            
-            # CRITICAL: Inject the logged-in user object into the arguments
-            tool_args["user"] = user_object
-            
-            # Call the tool with the combined arguments
-            tool_response = tool_to_call(**tool_args)
-            
-            # Send the tool's output back to the model
-            response = chat_session.send_message(
-                genai.Part(function_response=genai.FunctionResponse(
-                    name=tool_name,
-                    response=tool_response,
-                ))
-            )
-
+        # --- CORRECTED LOGIC BLOCK ---
+        # Check if the model's response includes a function call
+        if response.function_calls:
+            # It's a tool-using response, so we process the tools
+            for function_call in response.function_calls:
+                tool_name = function_call.name
+                tool_to_call = {
+                    "get_entire_business_profile": get_entire_business_profile,
+                    "update_business_profile": update_business_profile,
+                }[tool_name]
+                
+                tool_args = {key: value for key, value in function_call.args.items()}
+                tool_args["user"] = user_object
+                
+                tool_response_content = tool_to_call(**tool_args)
+                
+                response = chat_session.send_message(
+                    genai.Part(function_response=genai.FunctionResponse(
+                        name=tool_name,
+                        response={"content": tool_response_content}, # Wrap response in a dict
+                    ))
+                )
+        
+        # Whether it was a tool response or a direct text response, return the final text.
         return response.text
 
     except Exception as e:
