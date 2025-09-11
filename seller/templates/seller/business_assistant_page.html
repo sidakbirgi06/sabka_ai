@@ -198,68 +198,50 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // --- CHAT LOGIC ---
-    function startNewChat(event) {
-        // --- FIX: Stop this click from propagating to other elements ---
-        if (event) {
-            event.stopPropagation();
-        }
-        
-        console.log("Attempting to start a new chat...");
-        document.querySelectorAll('.chat-history-item').forEach(item => item.classList.remove('active'));
-        currentConversationId = null;
-        messageArea.innerHTML = '';
-        showWelcomeScreen();
-        chatInput.focus();
-        console.log("New chat state initiated. Welcome screen should be visible.");
-    }
-    
-    // --- CORRECTED FUNCTION to fix the event bubbling issue ---
-    async function fetchConversations() {
-        try {
-            const response = await fetch("{% url 'list_conversations' %}");
-            if (!response.ok) throw new Error('Failed to fetch conversations');
-            const conversations = await response.json();
-            chatHistoryList.innerHTML = '';
-            conversations.forEach(conv => {
-                const item = document.createElement('div');
-                item.classList.add('chat-history-item');
-                item.dataset.id = conv.id;
-                
-                // Create a separate span for the title
-                const title = document.createElement('span');
-                title.textContent = conv.title;
-                title.style.flexGrow = '1'; // Allow title to take up space
-                title.style.overflow = 'hidden';
-                title.style.textOverflow = 'ellipsis';
-                
-                // --- FIX: Make ONLY the title clickable ---
-                title.onclick = () => loadConversation(conv.id);
-                item.appendChild(title);
 
-                const deleteButton = document.createElement('button');
-                deleteButton.classList.add('delete-btn');
-                deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.492-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.71l.5 5a.75.75 0 1 1-1.498.142l-.5-5A.75.75 0 0 1 6.05 6Zm2.634.71a.75.75 0 0 0-.786-.71a.75.75 0 0 0-.787.71l.5 5a.75.75 0 0 0 1.498-.142l-.5-5Z" clip-rule="evenodd" /></svg>`;
-                deleteButton.onclick = (event) => deleteConversation(conv.id, event);
-                item.appendChild(deleteButton);
-                
-                chatHistoryList.appendChild(item);
-            });
-        } catch (error) {
-            console.error('Error fetching conversations:', error);
-        }
+    // --- UPDATED FUNCTION ---
+    // This function is now ONLY for the button click.
+    function startNewChat() {
+        console.log("Button clicked: Starting a new chat directly.");
+        
+        // 1. Deselect any active conversation in the sidebar
+        document.querySelectorAll('.chat-history-item').forEach(item => item.classList.remove('active'));
+        
+        // 2. Reset the state variable
+        currentConversationId = null;
+        
+        // 3. Show the chat screen immediately
+        showChatScreen();
+        
+        // 4. Clear old messages and add a fresh greeting
+        messageArea.innerHTML = '';
+        appendMessage('bot', 'Hello! How can I help you manage your business today?');
+        
+        // 5. Focus the input
+        chatInput.focus();
     }
     
-    // All other functions (loadConversation, sendMessage, deleteConversation, etc.)
-    // are correct and do not need to be changed. I am including them for completeness.
+    // --- NEW FUNCTION ---
+    // This function runs only once when the page loads.
+    function initializePage() {
+        console.log("Page loaded. Initializing.");
+        fetchConversations();
+        currentConversationId = null;
+        showWelcomeScreen(); // Show the welcome screen on initial load only.
+    }
+
+    // All other functions are correct and do not need changes.
+    // I am including them all again for completeness.
 
     async function loadConversation(conversationId) {
-        console.log(`Loading conversation ID: ${conversationId}`);
         showChatScreen();
         currentConversationId = conversationId;
         messageArea.innerHTML = '<div style="text-align: center; color: var(--text-secondary);">Loading chat...</div>';
+        
         document.querySelectorAll('.chat-history-item').forEach(item => {
             item.classList.toggle('active', item.dataset.id == conversationId);
         });
+        
         try {
             const response = await fetch(`/api/assistant/conversations/${conversationId}/`);
             if (!response.ok) throw new Error('Failed to load conversation');
@@ -273,7 +255,39 @@ document.addEventListener('DOMContentLoaded', function () {
             messageArea.innerHTML = '<div style="text-align: center; color: var(--danger-color);">Failed to load chat.</div>';
         }
     }
+    
+    async function fetchConversations() {
+        try {
+            const response = await fetch("{% url 'list_conversations' %}");
+            if (!response.ok) throw new Error('Failed to fetch conversations');
+            const conversations = await response.json();
+            chatHistoryList.innerHTML = '';
+            conversations.forEach(conv => {
+                const item = document.createElement('div');
+                item.classList.add('chat-history-item');
+                item.dataset.id = conv.id;
+                
+                const title = document.createElement('span');
+                title.textContent = conv.title;
+                title.style.flexGrow = '1';
+                title.style.overflow = 'hidden';
+                title.style.textOverflow = 'ellipsis';
+                title.addEventListener('click', () => loadConversation(conv.id));
+                item.appendChild(title);
 
+                const deleteButton = document.createElement('button');
+                deleteButton.classList.add('delete-btn');
+                deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.492-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.71l.5 5a.75.75 0 1 1-1.498.142l-.5-5A.75.75 0 0 1 6.05 6Zm2.634.71a.75.75 0 0 0-.786-.71a.75.75 0 0 0-.787.71l.5 5a.75.75 0 0 0 1.498-.142l-.5-5Z" clip-rule="evenodd" /></svg>`;
+                deleteButton.addEventListener('click', (event) => deleteConversation(conv.id, event));
+                item.appendChild(deleteButton);
+                
+                chatHistoryList.appendChild(item);
+            });
+        } catch (error) {
+            console.error('Error fetching conversations:', error);
+        }
+    }
+    
     async function sendMessage(event) {
         event.preventDefault();
         const userMessage = chatInput.value.trim();
@@ -317,9 +331,11 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             if (!response.ok) throw new Error('Failed to delete conversation.');
             if (currentConversationId == conversationId) {
-                startNewChat(null); // Pass null as we don't have an event object
+                // When deleting the active chat, go back to the welcome screen
+                initializePage();
+            } else {
+                await fetchConversations();
             }
-            await fetchConversations();
         } catch (error) {
             console.error('Error deleting conversation:', error);
             alert('Could not delete the conversation.');
@@ -358,8 +374,8 @@ document.addEventListener('DOMContentLoaded', function () {
     chatForm.addEventListener('submit', sendMessage);
     newChatBtn.addEventListener('click', startNewChat);
 
-    fetchConversations();
-    startNewChat(null); // Pass null initially as there's no event
+    // Call the new initialization function on page load
+    initializePage();
 });
 </script>
 
