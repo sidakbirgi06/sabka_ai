@@ -38,48 +38,26 @@ def get_gemini_response(prompt):
 
 
 # FOR BUSINESS ASSITANT 
-def get_assistant_response(history, user_object): # CORRECTED: Accepts 'history'
+def get_assistant_response(history, user_object):
     """
     Handles conversations for the Business Assistant using conversation history.
     It's configured with tools to interact with the database.
     """
+    # ... (the try block, api_key, genai.configure, and model setup are all the same) ...
     try:
         api_key = os.environ.get("GOOGLE_API_KEY")
         if not api_key:
-            print("Error: GOOGLE_API_KEY not found in environment variables.")
-            return "Sorry, there's a configuration issue with the AI service."
-
+            #...
+            return "..."
         genai.configure(api_key=api_key)
-
         model = genai.GenerativeModel(
-            model_name='gemini-1.5-flash',
-            tools=[get_entire_business_profile, update_business_profile],
-            system_instruction=(
-                 "You are a helpful and intelligent business assistant for the 'Karya AI' platform. " 
-                "Your primary goal is to help the user manage their business profile by answering their questions and updating their information using the provided tools. "
-                "The 'user' parameter for all tools will be provided automatically by the system. You must never ask the user for any kind of user ID."
-                "\n\n"
-                "**Communication Rules:**\n"
-                "- Communicate in a friendly, professional, and concise manner.\n"
-                "- NEVER mention that you are an AI or a language model.\n"
-                "- CRITICALLY, NEVER reveal the names of the internal tools or functions you are using (e.g., 'get_entire_business_profile'). Frame all your responses naturally. If you can't do something, say 'I can't help with that right now,' not 'I don't have a tool for that.'\n"
-                "\n\n"
-                "**Tool Usage Rules:**\n"
-                "- When the user asks to update information, be flexible. Map natural language to the correct database field names. For example, if the user says 'owners name', 'my name', or 'main contact', you should map this to the 'owner_name' field for the update tool.\n"
-                "- Here are the available fields for the update tool to help you map them correctly: 'business_name', 'owner_name', 'contact_number', 'business_email', 'address', 'operating_hours', 'social_media_links', 'usp', 'target_market', 'audience_profile', 'product_categories', 'inventory_update_frequency', 'top_selling_products', 'combo_packs', 'return_policy', 'faqs'."
-            )
+            #... (model_name, tools, system_instruction are all the same) ...
         )
 
-        # Start a chat session WITH the existing history from the database
         chat_session = model.start_chat(history=history)
-        
-        # Get the last user message from the history to send
         last_user_message = history[-1]['parts'][0]['text']
-        
-        # Send only the LATEST message, as the chat session has the full context
         response = chat_session.send_message(last_user_message)
         
-        # --- Tool Handling Logic ---
         if hasattr(response.candidates[0].content.parts[0], 'function_call'):
             function_call = response.candidates[0].content.parts[0].function_call
             tool_name = function_call.name
@@ -90,10 +68,13 @@ def get_assistant_response(history, user_object): # CORRECTED: Accepts 'history'
                 tool_args["user"] = user_object
                 tool_response_content = tool_to_call(**tool_args)
                 
+                # --- KEY CHANGE ---
+                # We now pass the dictionary from our tool directly as the response.
+                # This is the correct format the API expects.
                 response = chat_session.send_message(
                     genai.Part(function_response=genai.FunctionResponse(
                         name=tool_name,
-                        response={"content": tool_response_content},
+                        response=tool_response_content, # Pass the dict directly
                     ))
                 )
 

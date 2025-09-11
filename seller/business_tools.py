@@ -1,5 +1,8 @@
 from .models import BusinessProfile
 import json
+from django.contrib.auth.models import User
+from .models import BusinessProfile
+
 
 # BUSINESS PROFILE -> GETTER
 def get_entire_business_profile(user) -> str:
@@ -48,43 +51,44 @@ def get_entire_business_profile(user) -> str:
 
 
 # BUSINESS PROFILE ->  SETTER
-def update_business_profile(user, **updates) -> str:
+def update_business_profile(user: User, **updates: dict) -> dict:
     """
-    Updates one or more fields in the user's business profile.
-    Provide field names as arguments with their new values.
-    Example: update_business_profile(user, business_name="New Name", operating_hours="9-5")
+    Updates one or more fields in the user's BusinessProfile.
     """
-    print(f"[DEBUG] update_business_profile called with updates: {updates}")
-
-    if not updates:
-        return "No update information was provided."
-
+    # ... (the beginning of your function is the same)
     try:
         profile = BusinessProfile.objects.get(user=user)
-        print(f"[DEBUG] Found profile for user: {user.username}")
-        
-        updated_fields = []
-        for field, value in updates.items():
-            if hasattr(profile, field):
-                print(f"[DEBUG] About to update field '{field}' to '{value}'")
-                setattr(profile, field, value)
-                updated_fields.append(field)
-            else:
-                print(f"[DEBUG] Error: Field '{field}' does not exist.")
-                return f"Error: The field '{field}' does not exist in the Business Profile."
-
-        if not updated_fields:
-            return "None of the provided fields matched the Business Profile."
-
-        # MODIFIED THIS LINE TO BE MORE EXPLICIT
-        profile.save(update_fields=updated_fields)
-        print(f"[DEBUG] profile.save() called for fields: {updated_fields}")
-        
-        return f"Successfully updated the following fields: {', '.join(updated_fields)}."
-
     except BusinessProfile.DoesNotExist:
-        print(f"[DEBUG] Error: Business profile not found for user: {user.username}")
-        return "The user has not created a business profile yet. Cannot update."
+        return {"status": "error", "message": "Business profile not found."}
+
+    fields_to_update = []
+    for field, value in updates.items():
+        if hasattr(profile, field):
+            setattr(profile, field, value)
+            fields_to_update.append(field)
+        else:
+            # This is a good check to have for debugging
+            print(f"[DEBUG] Field '{field}' does not exist on BusinessProfile model.")
+
+    if not fields_to_update:
+        return {"status": "error", "message": "No valid fields were provided for update."}
+
+    try:
+        # Use the debugging print statements we created before
+        print(f"[DEBUG] About to update fields {fields_to_update} with values {updates}")
+        profile.save(update_fields=fields_to_update)
+        print(f"[DEBUG] profile.save() called for fields: {fields_to_update}")
+        
+        # --- KEY CHANGE ---
+        # Instead of a string, return a structured dictionary
+        return {
+            "status": "success",
+            "message": f"Successfully updated the following fields: {', '.join(fields_to_update)}",
+            "updated_fields": fields_to_update
+        }
     except Exception as e:
-        print(f"[DEBUG] An unexpected error occurred: {e}")
-        return f"An unexpected error occurred while trying to update: {e}"
+        print(f"[ERROR] Failed to save profile for user {user.id}: {e}")
+        return {"status": "error", "message": f"An error occurred while saving: {e}"}
+
+
+# ADD THE IMPORTS IN UTILS PY AFTER ADDING INFO ABOUT CHATBOT SET UP OR ANY PAGE TOO
