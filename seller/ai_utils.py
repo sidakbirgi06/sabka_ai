@@ -44,33 +44,45 @@ def get_assistant_response(user_object, history):
     Handles conversations for the Business Assistant using user-aware tools.
     """
     try:
-        # This setup part is all correct.
         api_key = os.environ.get("GOOGLE_API_KEY")
         if not api_key:
             return "Sorry, there's a configuration issue with the AI service."
+
         genai.configure(api_key=api_key)
 
-        # This "wrapper" logic is also correct and powerful.
+        # --- THE FIX IS HERE: We are making the tool descriptions much clearer ---
+
         def get_my_business_profile() -> str:
-            """Fetches the business profile for the currently logged-in user."""
+            """
+            Fetches and returns all information from the user's business profile.
+            This includes details like business name, address, products, and FAQs.
+            """
             return get_entire_business_profile(user_id=user_object.id)
 
         def update_my_business_profile(**updates: dict) -> dict:
-            """Updates the business profile for the currently logged-in user."""
+            """
+            Updates one or more fields in the user's business profile.
+            Use this to change details like the business_name, contact_number, address, etc.
+            The 'updates' argument must be a dictionary where keys are the field names
+            (e.g., 'business_name') and values are the new values.
+            """
             return update_business_profile(user_id=user_object.id, **updates)
 
         model = genai.GenerativeModel(
             model_name='gemini-1.5-flash',
             tools=[get_my_business_profile, update_my_business_profile],
             system_instruction=(
-                "You are a helpful and intelligent business assistant..." # Your full instruction text here
+                # Your system instruction is good and remains the same.
+                "You are a helpful and intelligent business assistant for the 'Karya AI' platform..."
             )
         )
         
+        # (The rest of the function is now correct and remains unchanged)
         response = model.generate_content(history)
         response_part = response.candidates[0].content.parts[0]
 
         if response_part.function_call and response_part.function_call.name:
+            # ... (all the tool-calling logic is correct)
             function_call = response_part.function_call
             tool_name = function_call.name
             
@@ -85,25 +97,14 @@ def get_assistant_response(user_object, history):
             tool_args = {key: value for key, value in function_call.args.items()}
             tool_response_content = tool_to_call(**tool_args)
             
-            # --- THE PERMANENT FIX IS HERE ---
-            # Instead of creating a special genai.types.Part object, we now create a
-            # simple and reliable Python dictionary in the exact format the API expects.
-            # This removes the cause of all previous AttributeErrors.
             tool_response_part = {
                 "function_response": {
                     "name": tool_name,
-                    "response": {
-                        "content": tool_response_content,
-                    },
+                    "response": {"content": tool_response_content},
                 }
             }
 
-            second_response = model.generate_content(
-                [
-                    *history,
-                    tool_response_part # We pass our new, simple dictionary here
-                ]
-            )
+            second_response = model.generate_content([*history, tool_response_part])
             return second_response.text
         else:
             return response.text
