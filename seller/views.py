@@ -492,32 +492,35 @@ def get_conversation_history(request, conversation_id):
 @login_required
 @csrf_exempt
 def assistant_chat_api(request):
-    """The main API for sending a message to the assistant."""
+    """
+    The main API for sending a message to the assistant and handling conversation history.
+    """
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             user_message = data.get('message')
-            conversation_id = data.get('conversation_id') # Can be null for a new chat
+            conversation_id = data.get('conversation_id')
 
             if not user_message:
                 return JsonResponse({'error': 'No message provided'}, status=400)
 
+            # Get the conversation object for the current user
             conversation = None
             if conversation_id:
-                # Add to an existing conversation
+                # Try to get an existing conversation
                 conversation = AssistantConversation.objects.get(id=conversation_id, user=request.user)
             else:
-                # Start a new conversation
+                # If no ID is provided, create a new conversation
                 conversation = AssistantConversation.objects.create(user=request.user)
 
-            # Save the new user message to the database before calling the AI
+            # Save the user's new message to the database
             AssistantChatMessage.objects.create(
                 conversation=conversation,
                 role='user',
                 content=user_message
             )
 
-            # Prepare the full history for the AI model
+            # Build the complete, ordered history from the database
             history_for_ai = []
             db_messages = conversation.messages.order_by('timestamp')
             
@@ -525,29 +528,30 @@ def assistant_chat_api(request):
                  # The Gemini API expects the role to be 'user' or 'model'
                  history_for_ai.append({'role': msg.role, 'parts': [{'text': msg.content}]})
 
-            # Get AI response by passing the LATEST message and the FULL history
+            # Call the AI function with the complete history
+            # This is the corrected call with the redundant 'user_message' removed
             ai_reply = get_assistant_response(
-                user_message=user_message,
                 user_object=request.user,
                 history=history_for_ai
             )
 
-            # Save AI response to the database
+            # Save the AI's response to the database
             AssistantChatMessage.objects.create(
                 conversation=conversation,
                 role='model',
                 content=ai_reply
             )
             
+            # Return the reply and the conversation ID to the frontend
             return JsonResponse({
                 'reply': ai_reply,
                 'conversation_id': conversation.id
             })
 
         except AssistantConversation.DoesNotExist:
-            return JsonResponse({'error': 'Conversation not found'}, status=404)
+            return JsonResponse({'error': 'Conversation not found or you do not have permission to view it.'}, status=404)
         except Exception as e:
-            print(f"Error in assistant_chat_api: {e}")
+            print(f"An error occurred in assistant_chat_api: {e}")
             traceback.print_exc()
             return JsonResponse({'error': 'An internal error occurred'}, status=500)
 
