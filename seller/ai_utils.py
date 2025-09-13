@@ -39,19 +39,18 @@ def get_gemini_response(prompt):
 
 
 # FOR BUSINESS ASSITANT 
-# FOR BUSINESS ASSISTANT
-# --- CHANGE 1: We REMOVE the 'user_message' parameter ---
 def get_assistant_response(user_object, history):
     """
     Handles conversations for the Business Assistant using user-aware tools.
     """
     try:
-        # (All of this setup code is correct and remains the same)
+        # This setup part is all correct.
         api_key = os.environ.get("GOOGLE_API_KEY")
         if not api_key:
             return "Sorry, there's a configuration issue with the AI service."
         genai.configure(api_key=api_key)
 
+        # This "wrapper" logic is also correct and powerful.
         def get_my_business_profile() -> str:
             """Fetches the business profile for the currently logged-in user."""
             return get_entire_business_profile(user_id=user_object.id)
@@ -64,8 +63,7 @@ def get_assistant_response(user_object, history):
             model_name='gemini-1.5-flash',
             tools=[get_my_business_profile, update_my_business_profile],
             system_instruction=(
-                # (Your system instruction is correct and remains the same)
-                "You are a helpful and intelligent business assistant..."
+                "You are a helpful and intelligent business assistant..." # Your full instruction text here
             )
         )
         
@@ -87,15 +85,23 @@ def get_assistant_response(user_object, history):
             tool_args = {key: value for key, value in function_call.args.items()}
             tool_response_content = tool_to_call(**tool_args)
             
-            # --- THE FIX IS ON THE LINE BELOW ---
-            # We changed genai.Part to the correct address: genai.types.Part
+            # --- THE PERMANENT FIX IS HERE ---
+            # Instead of creating a special genai.types.Part object, we now create a
+            # simple and reliable Python dictionary in the exact format the API expects.
+            # This removes the cause of all previous AttributeErrors.
+            tool_response_part = {
+                "function_response": {
+                    "name": tool_name,
+                    "response": {
+                        "content": tool_response_content,
+                    },
+                }
+            }
+
             second_response = model.generate_content(
                 [
                     *history,
-                    genai.types.Part(function_response=genai.FunctionResponse(
-                        name=tool_name,
-                        response={"content": tool_response_content},
-                    ))
+                    tool_response_part # We pass our new, simple dictionary here
                 ]
             )
             return second_response.text
