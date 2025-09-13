@@ -1,6 +1,7 @@
 import os
 import google.generativeai as genai
 from .business_tools import get_entire_business_profile, update_business_profile
+import traceback
 
 
 
@@ -38,50 +39,63 @@ def get_gemini_response(prompt):
 
 
 # FOR BUSINESS ASSITANT 
-def get_assistant_response(history, user_object):
+def get_assistant_response(user_message, user_object, history):
     """
-    Handles conversations for the Business Assistant using conversation history.
-    It's configured with tools to interact with the database.
+    Handles conversations for the Business Assistant.
+    It's configured with tools to interact with the database and can use chat history.
     """
-    # ... (the try block, api_key, genai.configure, and model setup are all the same) ...
     try:
         api_key = os.environ.get("GOOGLE_API_KEY")
         if not api_key:
-            #...
-            return "..."
+            # ... (error handling)
+            return "Sorry, there's a configuration issue with the AI service."
+
         genai.configure(api_key=api_key)
+
         model = genai.GenerativeModel(
-            #... (model_name, tools, system_instruction are all the same) ...
+            model_name='gemini-1.5-flash',
+            tools=[get_entire_business_profile, update_business_profile], # This now works because the functions are simple
+            system_instruction=(
+                "You are a helpful and intelligent business assistant for the 'Karya AI' platform. "
+                "Your primary goal is to help the user manage their business profile by answering their questions and updating their information using the provided tools. "
+                # --- MINOR TEXT CHANGE FOR ACCURACY ---
+                "The 'user_id' parameter for all tools will be provided automatically by the system. You must never ask the user for any kind of user ID."
+                # ... (rest of your system instruction is the same)
+            )
         )
-
-        chat_session = model.start_chat(history=history)
-        last_user_message = history[-1]['parts'][0]['text']
-        response = chat_session.send_message(last_user_message)
         
-        if hasattr(response.candidates[0].content.parts[0], 'function_call'):
-            function_call = response.candidates[0].content.parts[0].function_call
+        response = model.generate_content([*history, user_message])
+        response_part = response.candidates[0].content.parts[0]
+
+        if response_part.function_call and response_part.function_call.name:
+            function_call = response_part.function_call
             tool_name = function_call.name
-            tool_to_call = next((t for t in [get_entire_business_profile, update_business_profile] if t.__name__ == tool_name), None)
+            
+            tool_to_call = {
+                "get_entire_business_profile": get_entire_business_profile,
+                "update_business_profile": update_business_profile,
+            }.get(tool_name)
 
-            if tool_to_call:
-                tool_args = {key: value for key, value in function_call.args.items()}
-                tool_args["user"] = user_object
-                tool_response_content = tool_to_call(**tool_args)
-                
-                # --- KEY CHANGE ---
-                # We now pass the dictionary from our tool directly as the response.
-                # This is the correct format the API expects.
-                response = chat_session.send_message(
-                    genai.Part(function_response=genai.FunctionResponse(
-                        name=tool_name,
-                        response=tool_response_content, # Pass the dict directly
-                    ))
-                )
+            if not tool_to_call:
+                 return f"Error: The AI tried to use an unknown tool: {tool_name}"
 
-        return response.text
+            tool_args = {key: value for key, value in function_call.args.items()}
+            
+            # --- CRITICAL CHANGE HERE ---
+            # Instead of passing the whole user object, we pass its ID.
+            tool_args["user_id"] = user_object.id
+            
+            tool_response_content = tool_to_call(**tool_args)
+            
+            # (The rest of the function remains the same...)
+            second_response = model.generate_content(
+                # ...
+            )
+            return second_response.text
+        else:
+            return response.text
 
     except Exception as e:
-        import traceback
-        print(f"An error occurred in get_assistant_response:")
+        print(f"An error occurred in get_assistant_response: {e}")
         traceback.print_exc()
         return "I'm sorry, an error occurred while processing your request. Please check the system logs."

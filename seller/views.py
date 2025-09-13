@@ -510,31 +510,35 @@ def assistant_chat_api(request):
                 # Start a new conversation
                 conversation = AssistantConversation.objects.create(user=request.user)
 
-            # Save user message to DB
+            # Save the new user message to the database before calling the AI
             AssistantChatMessage.objects.create(
                 conversation=conversation,
                 role='user',
                 content=user_message
             )
 
-            # Prepare history for the AI model
+            # Prepare the full history for the AI model
             history_for_ai = []
-            db_messages = conversation.messages.all()
+            db_messages = conversation.messages.order_by('timestamp')
+            
             for msg in db_messages:
-                history_for_ai.append({'role': msg.role, 'parts': [{'text': msg.content}]})
+                 # The Gemini API expects the role to be 'user' or 'model'
+                 history_for_ai.append({'role': msg.role, 'parts': [{'text': msg.content}]})
 
-            # Get AI response
-            ai_reply = get_assistant_response(history=history_for_ai, user_object=request.user)
+            # Get AI response by passing the LATEST message and the FULL history
+            ai_reply = get_assistant_response(
+                user_message=user_message,
+                user_object=request.user,
+                history=history_for_ai
+            )
 
-            # Save AI response to DB
+            # Save AI response to the database
             AssistantChatMessage.objects.create(
                 conversation=conversation,
                 role='model',
                 content=ai_reply
             )
             
-            # (Optional Title Generation can be added here in the future)
-
             return JsonResponse({
                 'reply': ai_reply,
                 'conversation_id': conversation.id
@@ -544,6 +548,7 @@ def assistant_chat_api(request):
             return JsonResponse({'error': 'Conversation not found'}, status=404)
         except Exception as e:
             print(f"Error in assistant_chat_api: {e}")
+            traceback.print_exc()
             return JsonResponse({'error': 'An internal error occurred'}, status=500)
 
     return JsonResponse({'error': 'Only POST method is allowed'}, status=405)

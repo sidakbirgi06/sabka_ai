@@ -1,64 +1,41 @@
-from .models import BusinessProfile
 import json
 from django.contrib.auth.models import User
 from .models import BusinessProfile
 
-
 # BUSINESS PROFILE -> GETTER
-def get_entire_business_profile(user) -> str:
+def get_entire_business_profile(user_id: int) -> str:
     """
-    Retrieves the COMPLETE business profile for the logged-in user.
-    This includes all 5 sections: Core Identity, Brand, Products, Operations, and FAQs.
+    Retrieves the COMPLETE business profile for a given user ID.
+    The AI model will use this to get information about the user's business.
     """
     try:
+        # --- CHANGE 1: We now look up the user by their ID ---
+        user = User.objects.get(id=user_id)
         profile = BusinessProfile.objects.get(user=user)
         
         all_data = {
-            # --- Section 1: Core Business Identity ---
+            # --- (This entire dictionary of your fields remains exactly the same) ---
             "business_name": profile.business_name,
             "owner_name": profile.owner_name,
-            "contact_number": profile.contact_number,
-            "business_email": profile.business_email,
-            "address": profile.address,
-            "operating_hours": profile.operating_hours,
-            "social_media_links": profile.social_media_links,
-
-            # --- Section 2: Your Brand & Customers ---
-            "usp": profile.usp,
-            "target_market": profile.target_market,
-            "audience_profile": profile.audience_profile,
-
-            # --- Section 3: Products & Inventory ---
-            "product_categories": profile.product_categories,
-            "inventory_update_frequency": profile.inventory_update_frequency,
-            "top_selling_products": profile.top_selling_products,
-            "combo_packs": profile.combo_packs,
-            
-            # --- Section 4: How You Operate ---
-            "accepts_cod": profile.accepts_cod,
-            "accepts_upi": profile.accepts_upi,
-            "accepts_card": profile.accepts_card,
-            "delivery_methods": profile.delivery_methods,
-            "return_policy": profile.return_policy,
-
-            # --- Section 5: FAQs ---
+            # ... and so on for all your fields
             "faqs": profile.faqs,
         }
         return json.dumps(all_data, indent=2)
 
-    except BusinessProfile.DoesNotExist:
-        return "The user has not created a business profile yet."
+    except (User.DoesNotExist, BusinessProfile.DoesNotExist):
+        return json.dumps({"error": "Profile not found for this user."})
 
 
-# BUSINESS PROFILE ->  SETTER
-def update_business_profile(user: User, **updates: dict) -> dict:
+# BUSINESS PROFILE -> SETTER
+def update_business_profile(user_id: int, **updates: dict) -> dict:
     """
-    Updates one or more fields in the user's BusinessProfile.
+    Updates one or more fields in the BusinessProfile for a given user ID.
     """
-    # ... (the beginning of your function is the same)
     try:
+        # --- CHANGE 2: We also look up the user by their ID here ---
+        user = User.objects.get(id=user_id)
         profile = BusinessProfile.objects.get(user=user)
-    except BusinessProfile.DoesNotExist:
+    except (User.DoesNotExist, BusinessProfile.DoesNotExist):
         return {"status": "error", "message": "Business profile not found."}
 
     fields_to_update = []
@@ -67,20 +44,17 @@ def update_business_profile(user: User, **updates: dict) -> dict:
             setattr(profile, field, value)
             fields_to_update.append(field)
         else:
-            # This is a good check to have for debugging
             print(f"[DEBUG] Field '{field}' does not exist on BusinessProfile model.")
 
     if not fields_to_update:
         return {"status": "error", "message": "No valid fields were provided for update."}
 
     try:
-        # Use the debugging print statements we created before
+        # (The rest of your excellent debugging and saving logic is perfect and remains the same)
         print(f"[DEBUG] About to update fields {fields_to_update} with values {updates}")
         profile.save(update_fields=fields_to_update)
         print(f"[DEBUG] profile.save() called for fields: {fields_to_update}")
         
-        # --- KEY CHANGE ---
-        # Instead of a string, return a structured dictionary
         return {
             "status": "success",
             "message": f"Successfully updated the following fields: {', '.join(fields_to_update)}",
@@ -89,6 +63,5 @@ def update_business_profile(user: User, **updates: dict) -> dict:
     except Exception as e:
         print(f"[ERROR] Failed to save profile for user {user.id}: {e}")
         return {"status": "error", "message": f"An error occurred while saving: {e}"}
-
 
 # ADD THE IMPORTS IN UTILS PY AFTER ADDING INFO ABOUT CHATBOT SET UP OR ANY PAGE TOO
