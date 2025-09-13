@@ -47,24 +47,35 @@ def get_assistant_response(user_message, user_object, history):
     try:
         api_key = os.environ.get("GOOGLE_API_KEY")
         if not api_key:
-            # ... (error handling)
+            print("Error: GOOGLE_API_KEY not found in environment variables.")
             return "Sorry, there's a configuration issue with the AI service."
 
         genai.configure(api_key=api_key)
 
         model = genai.GenerativeModel(
             model_name='gemini-1.5-flash',
-            tools=[get_entire_business_profile, update_business_profile], # This now works because the functions are simple
+            tools=[get_entire_business_profile, update_business_profile],
             system_instruction=(
                 "You are a helpful and intelligent business assistant for the 'Karya AI' platform. "
                 "Your primary goal is to help the user manage their business profile by answering their questions and updating their information using the provided tools. "
-                # --- MINOR TEXT CHANGE FOR ACCURACY ---
                 "The 'user_id' parameter for all tools will be provided automatically by the system. You must never ask the user for any kind of user ID."
-                # ... (rest of your system instruction is the same)
+                "\n\n"
+                "**Communication Rules:**\n"
+                "- Communicate in a friendly, professional, and concise manner.\n"
+                "- NEVER mention that you are an AI or a language model.\n"
+                "- CRITICALLY, NEVER reveal the names of the internal tools or functions you are using (e.g., 'get_entire_business_profile'). Frame all your responses naturally. If you can't do something, say 'I can't help with that right now,' not 'I don't have a tool for that.'\n"
+                "\n\n"
+                "**Tool Usage Rules:**\n"
+                "- When the user asks to update information, be flexible. Map natural language to the correct database field names. For example, if the user says 'owners name', 'my name', or 'main contact', you should map this to the 'owner_name' field for the update tool.\n"
+                "- Here are the available fields for the update tool to help you map them correctly: 'business_name', 'owner_name', 'contact_number', 'business_email', 'address', 'operating_hours', 'social_media_links', 'usp', 'target_market', 'audience_profile', 'product_categories', 'inventory_update_frequency', 'top_selling_products', 'combo_packs', 'return_policy', 'faqs'."
             )
         )
         
-        response = model.generate_content([*history, user_message])
+        # This first call is correct
+        response = model.generate_content(
+            [*history, user_message],
+        )
+
         response_part = response.candidates[0].content.parts[0]
 
         if response_part.function_call and response_part.function_call.name:
@@ -80,18 +91,25 @@ def get_assistant_response(user_message, user_object, history):
                  return f"Error: The AI tried to use an unknown tool: {tool_name}"
 
             tool_args = {key: value for key, value in function_call.args.items()}
-            
-            # --- CRITICAL CHANGE HERE ---
-            # Instead of passing the whole user object, we pass its ID.
             tool_args["user_id"] = user_object.id
             
             tool_response_content = tool_to_call(**tool_args)
             
-            # (The rest of the function remains the same...)
+            # --- THE FIX IS HERE ---
+            # We send the context back to the model for a final, natural response.
             second_response = model.generate_content(
-                # ...
+                [
+                    *history,
+                    user_message,
+                    # The line "response.candidates[0].content," has been REMOVED from here.
+                    genai.Part(function_response=genai.FunctionResponse(
+                        name=tool_name,
+                        response={"content": tool_response_content},
+                    ))
+                ]
             )
             return second_response.text
+
         else:
             return response.text
 
