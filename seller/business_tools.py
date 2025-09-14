@@ -1,67 +1,76 @@
 import json
 from django.contrib.auth.models import User
+from django.forms.models import model_to_dict
 from .models import BusinessProfile
+from enum import Enum
 
-# BUSINESS PROFILE -> GETTER
-def get_entire_business_profile(user_id: int) -> str:
+
+class ProfileAction(Enum):
+    READ = "READ"
+    WRITE = "WRITE"
+
+
+def manage_business_profile(
+    user_id: int,
+    action: ProfileAction,
+    # All updatable fields from your model are listed here
+    business_name: str = None, description: str = None, owner_name: str = None,
+    contact_number: str = None, business_email: str = None, address: str = None,
+    operating_hours: str = None, social_media_links: str = None, usp: str = None,
+    target_market: str = None, audience_profile: str = None, product_categories: str = None,
+    inventory_update_frequency: str = None, top_selling_products: str = None,
+    combo_packs: str = None, accepts_cod: bool = None, accepts_upi: bool = None,
+    accepts_card: bool = None, delivery_methods: str = None, return_policy: str = None,
+    faqs: str = None
+) -> str:
     """
-    Retrieves the COMPLETE business profile for a given user ID.
-    The AI model will use this to get information about the user's business.
+    Manages the user's business profile.
+    Use action='READ' to fetch the complete profile.
+    Use action='WRITE' to update specific fields by providing them as arguments.
     """
     try:
-        # --- CHANGE 1: We now look up the user by their ID ---
         user = User.objects.get(id=user_id)
         profile = BusinessProfile.objects.get(user=user)
-        
-        all_data = {
-            # --- (This entire dictionary of your fields remains exactly the same) ---
-            "business_name": profile.business_name,
-            "owner_name": profile.owner_name,
-            # ... and so on for all your fields
-            "faqs": profile.faqs,
-        }
-        return json.dumps(all_data, indent=2)
+
+        # ----------------- READ -----------------
+        if action == ProfileAction.READ:
+            profile_data = model_to_dict(profile)
+            profile_data.pop('id', None)
+            profile_data.pop('user', None)
+            return json.dumps({"status": "success", "data": profile_data})
+
+        # ----------------- WRITE -----------------
+        elif action == ProfileAction.WRITE:
+            updates = {}
+            # Only include actual DB fields (skip id/user)
+            model_fields = [f.name for f in profile._meta.fields if f.name not in ['id', 'user']]
+
+            for field in model_fields:
+                value = locals().get(field)
+                if value is not None:
+                    updates[field] = value
+
+            if not updates:
+                return json.dumps({
+                    "status": "error",
+                    "message": "No valid fields were provided for update."
+                })
+
+            for field, value in updates.items():
+                setattr(profile, field, value)
+
+            # Save only updated fields
+            profile.save(update_fields=list(updates.keys()))
+
+            return json.dumps({
+                "status": "success",
+                "message": f"Successfully updated fields: {list(updates.keys())}"
+            })
 
     except (User.DoesNotExist, BusinessProfile.DoesNotExist):
-        return json.dumps({"error": "Profile not found for this user."})
-
-
-# BUSINESS PROFILE -> SETTER
-def update_business_profile(user_id: int, **updates: dict) -> dict:
-    """
-    Updates one or more fields in the BusinessProfile for a given user ID.
-    """
-    try:
-        # --- CHANGE 2: We also look up the user by their ID here ---
-        user = User.objects.get(id=user_id)
-        profile = BusinessProfile.objects.get(user=user)
-    except (User.DoesNotExist, BusinessProfile.DoesNotExist):
-        return {"status": "error", "message": "Business profile not found."}
-
-    fields_to_update = []
-    for field, value in updates.items():
-        if hasattr(profile, field):
-            setattr(profile, field, value)
-            fields_to_update.append(field)
-        else:
-            print(f"[DEBUG] Field '{field}' does not exist on BusinessProfile model.")
-
-    if not fields_to_update:
-        return {"status": "error", "message": "No valid fields were provided for update."}
-
-    try:
-        # (The rest of your excellent debugging and saving logic is perfect and remains the same)
-        print(f"[DEBUG] About to update fields {fields_to_update} with values {updates}")
-        profile.save(update_fields=fields_to_update)
-        print(f"[DEBUG] profile.save() called for fields: {fields_to_update}")
-        
-        return {
-            "status": "success",
-            "message": f"Successfully updated the following fields: {', '.join(fields_to_update)}",
-            "updated_fields": fields_to_update
-        }
+        return json.dumps({"status": "error", "message": "Profile not found."})
     except Exception as e:
-        print(f"[ERROR] Failed to save profile for user {user.id}: {e}")
-        return {"status": "error", "message": f"An error occurred while saving: {e}"}
-
-# ADD THE IMPORTS IN UTILS PY AFTER ADDING INFO ABOUT CHATBOT SET UP OR ANY PAGE TOO
+        return json.dumps({
+            "status": "error",
+            "message": f"An unexpected error occurred: {str(e)}"
+        })
