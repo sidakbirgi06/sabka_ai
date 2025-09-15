@@ -2,75 +2,56 @@ import json
 from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from .models import BusinessProfile
-from enum import Enum
 
-
-class ProfileAction(Enum):
-    READ = "READ"
-    WRITE = "WRITE"
-
-
-def manage_business_profile(
-    user_id: int,
-    action: ProfileAction,
-    # All updatable fields from your model are listed here
-    business_name: str = None, description: str = None, owner_name: str = None,
-    contact_number: str = None, business_email: str = None, address: str = None,
-    operating_hours: str = None, social_media_links: str = None, usp: str = None,
-    target_market: str = None, audience_profile: str = None, product_categories: str = None,
-    inventory_update_frequency: str = None, top_selling_products: str = None,
-    combo_packs: str = None, accepts_cod: bool = None, accepts_upi: bool = None,
-    accepts_card: bool = None, delivery_methods: str = None, return_policy: str = None,
-    faqs: str = None
-) -> str:
+# --- TOOL 1: FOR READING DATA ---
+# This tool reliably reads ALL fields from your profile.
+def get_entire_business_profile(user_id: int) -> str:
     """
-    Manages the user's business profile.
-    Use action='READ' to fetch the complete profile.
-    Use action='WRITE' to update specific fields by providing them as arguments.
+    Fetches all business profile fields for a given user ID and returns them as a JSON string.
     """
     try:
         user = User.objects.get(id=user_id)
         profile = BusinessProfile.objects.get(user=user)
+        
+        # This is the reliable Django method to get all model fields.
+        profile_data = model_to_dict(profile)
 
-        # ----------------- READ -----------------
-        if action == ProfileAction.READ:
-            profile_data = model_to_dict(profile)
-            profile_data.pop('id', None)
-            profile_data.pop('user', None)
-            return json.dumps({"status": "success", "data": profile_data})
+        # Remove internal fields the AI doesn't need.
+        profile_data.pop('id', None)
+        profile_data.pop('user', None)
 
-        # ----------------- WRITE -----------------
-        elif action == ProfileAction.WRITE:
-            updates = {}
-            # Only include actual DB fields (skip id/user)
-            model_fields = [f.name for f in profile._meta.fields if f.name not in ['id', 'user']]
-
-            for field in model_fields:
-                value = locals().get(field)
-                if value is not None:
-                    updates[field] = value
-
-            if not updates:
-                return json.dumps({
-                    "status": "error",
-                    "message": "No valid fields were provided for update."
-                })
-
-            for field, value in updates.items():
-                setattr(profile, field, value)
-
-            # Save only updated fields
-            profile.save(update_fields=list(updates.keys()))
-
-            return json.dumps({
-                "status": "success",
-                "message": f"Successfully updated fields: {list(updates.keys())}"
-            })
+        return json.dumps(profile_data, indent=2)
 
     except (User.DoesNotExist, BusinessProfile.DoesNotExist):
-        return json.dumps({"status": "error", "message": "Profile not found."})
+        return json.dumps({"error": "Profile not found for this user."})
     except Exception as e:
-        return json.dumps({
-            "status": "error",
-            "message": f"An unexpected error occurred: {str(e)}"
-        })
+        return json.dumps({"error": f"An unexpected error occurred: {str(e)}"})
+
+
+# --- TOOL 2: FOR WRITING DATA ---
+# This tool safely updates ONLY the specified fields in your profile.
+def update_business_profile(user_id: int, **updates) -> str:
+    """
+    Updates one or more fields in the BusinessProfile for a given user ID.
+    """
+    try:
+        user = User.objects.get(id=user_id)
+        profile = BusinessProfile.objects.get(user=user)
+        
+        updated_fields = list(updates.keys())
+        if not updated_fields:
+            return json.dumps({"success": False, "error": "No valid fields provided to update."})
+
+        for field, value in updates.items():
+            if hasattr(profile, field):
+                setattr(profile, field, value)
+        
+        # This is the crucial fix to prevent silent save failures.
+        profile.save(update_fields=updated_fields)
+        
+        return json.dumps({"success": True, "message": f"Profile updated successfully for fields: {updated_fields}"})
+            
+    except (User.DoesNotExist, BusinessProfile.DoesNotExist):
+        return json.dumps({"success": False, "error": "Profile not found for this user."})
+    except Exception as e:
+        return json.dumps({"success": False, "error": f"An unexpected error occurred: {str(e)}"})
