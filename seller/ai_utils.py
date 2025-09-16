@@ -146,18 +146,29 @@ def get_gemini_response(prompt):
 
 
 
-# --- NEW, ROBUST HUGGING FACE BUSINESS ASSISTANT BRAIN ---
+# FOR BUSINESS ASSISTANT (Powered by Hugging Face)
+# ==============================================================================
 
-# The direct URL to the Hugging Face API endpoint. This bypasses all faulty routing.
-API_URL = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct"
+# --- The direct URL to the Hugging Face API endpoint for our chosen model ---
+API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
 
-# The master prompt that teaches the model how to use our tools.
+# The master prompt that teaches the model how to behave and use our tools.
 SYSTEM_PROMPT = """You are Karya AI, an intelligent and helpful business assistant. Your goal is to help the user manage their business profile. You have two tools available:
-1. `get_entire_business_profile()`: Use this tool when the user asks a question about their business.
-2. `update_business_profile(parameters)`: Use this tool when the user asks to change or update information.
+
+1. `get_entire_business_profile()`: Use this tool when the user asks a question about their business (e.g., "what is my usp?", "tell me my hours"). This tool takes no parameters.
+
+2. `update_business_profile(parameters)`: Use this tool when the user asks to change, update, or add information. This tool requires parameters.
+
 **CRITICAL RULE:** When you decide to use a tool, you MUST respond ONLY with a JSON object in the following format, and nothing else.
-{"tool_to_call": "<tool_name>", "parameters": {"arg_name": "arg_value"}}
-If you are not calling a tool, just respond naturally.
+
+{
+  "tool_to_call": "<name_of_the_tool_to_call>",
+  "parameters": {
+    "parameter_name": "parameter_value"
+  }
+}
+
+If you are not calling a tool, just respond naturally to the user.
 """
 
 def hf_api_call(prompt):
