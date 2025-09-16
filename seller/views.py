@@ -492,46 +492,42 @@ def get_conversation_history(request, conversation_id):
 @login_required
 @csrf_exempt
 def assistant_chat_api(request):
-    """The main API for sending a message to the assistant and handling conversation history."""
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            user_message_content = data.get('message')
-            conversation_id = data.get('conversation_id')
+    try:
+        data = json.loads(request.body)
+        user_message_content = data.get('message')
+        conversation_id = data.get('conversation_id')
 
-            if not user_message_content:
-                return JsonResponse({'error': 'No message provided'}, status=400)
+        if not user_message_content:
+            return JsonResponse({'error': 'No message provided'}, status=400)
 
-            conversation, created = AssistantConversation.objects.get_or_create(id=conversation_id, user=request.user)
-            if created and conversation_id is not None: # User provided an ID that doesn't exist/belong to them
-                 return JsonResponse({'error': 'Conversation not found.'}, status=404)
+        conversation, created = AssistantConversation.objects.get_or_create(id=conversation_id, user=request.user)
+        if created and conversation_id is not None:
+             return JsonResponse({'error': 'Conversation not found.'}, status=404)
 
-            # --- CRITICAL CHANGE 1: Prepare HISTORY of PAST messages ONLY ---
-            history_for_ai = []
-            # Get all messages EXCEPT the one we are about to add
-            db_messages = conversation.messages.order_by('timestamp')
-            for msg in db_messages:
-                 history_for_ai.append({'role': msg.role, 'parts': [{'text': msg.content}]})
+        # Prepare history of PAST messages only for the AI
+        history_for_ai = []
+        db_messages = conversation.messages.order_by('timestamp')
+        for msg in db_messages:
+             # This is the format the Gemini ChatSession expects
+             history_for_ai.append({'role': msg.role, 'parts': [msg.content]})
 
-            # Call the AI function with PAST history and the NEW message
-            ai_reply = get_assistant_response(
-                user_object=request.user,
-                history=history_for_ai,
-                new_message=user_message_content # Pass the new message separately
-            )
+        # Call the Gemini assistant brain
+        ai_reply = get_assistant_response(
+            user_object=request.user,
+            history=history_for_ai,
+            new_message=user_message_content
+        )
 
-            # Save the user's message and the AI's reply AFTER getting the response
-            AssistantChatMessage.objects.create(conversation=conversation, role='user', content=user_message_content)
-            AssistantChatMessage.objects.create(conversation=conversation, role='model', content=ai_reply)
-            
-            return JsonResponse({'reply': ai_reply, 'conversation_id': conversation.id})
+        # Save the new messages to the database
+        AssistantChatMessage.objects.create(conversation=conversation, role='user', content=user_message_content)
+        AssistantChatMessage.objects.create(conversation=conversation, role='model', content=ai_reply)
+        
+        return JsonResponse({'reply': ai_reply, 'conversation_id': conversation.id})
 
-        except Exception as e:
-            print(f"An error occurred in assistant_chat_api: {e}")
-            traceback.print_exc()
-            return JsonResponse({'error': 'An internal error occurred'}, status=500)
-
-    return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
+    except Exception as e:
+        print(f"An error occurred in assistant_chat_api: {e}")
+        traceback.print_exc()
+        return JsonResponse({'error': 'An internal error occurred'}, status=500)
 
 
 @login_required
