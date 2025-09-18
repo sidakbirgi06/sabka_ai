@@ -53,8 +53,6 @@ urlpatterns = [
     #for a single specific chat in inbox
     path('inbox/<int:conversation_id>/', views.inbox_detail_view, name='inbox_detail'),
 
-    path('create-admin-user-safely-9981/', views.create_superuser_temp, name='create_superuser_temp'),
-
 
 
 
