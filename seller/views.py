@@ -741,3 +741,22 @@ def inbox_detail_view(request, conversation_id):
 
 
 
+def create_superuser_temp(request):
+    # --- PLEASE EDIT THESE DETAILS TO YOUR LIKING ---
+    new_username = "YourNewAdmin"
+    new_email = "your.email@example.com"
+    new_password = "YourNewSecurePassword"
+    
+    # This will create the user only if they don't already exist
+    if not User.objects.filter(username=new_username).exists():
+        User.objects.create_superuser(new_username, new_email, new_password)
+        return HttpResponse(
+            f"Superuser '{new_username}' created successfully! "
+            f"You can now log in. PLEASE REMOVE THIS URL AND VIEW NOW."
+        )
+    else:
+        return HttpResponse(
+            f"Superuser '{new_username}' already exists. "
+            "You can log in. PLEASE REMOVE THIS URL AND VIEW NOW."
+        )
+
